@@ -1,4 +1,4 @@
-export default function App() {
+ export default function App() {
   return (
     <div style={{
       minHeight: '100vh',
@@ -7,7 +7,7 @@ export default function App() {
       justifyContent: 'center',
       background: '#0f172a',
       color: 'white',
-      fontFamily: 'Arial, sans-serif'
+      fontFamily: 'Arial'
     }}>
       <h1>DataVista AI Working ✅</h1>
     </div>
