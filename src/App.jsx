@@ -1,5 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 
+const starterCsv = `PRODUCT,REGION,MONTH,SALES
+Laptop,West,Jan,20000
+Mobile,East,Feb,15000
+Tablet,North,Mar,12000
+Camera,South,Apr,11000
+Monitor,West,May,9000
+Keyboard,East,Jun,7000
+Mouse,North,Jul,6500
+Printer,South,Aug,8000
+Speaker,West,Sep,6000
+Router,East,Oct,7500`;
+
 function parseCSV(text) {
   const lines = text
     .split(/\r?\n/)
@@ -44,13 +56,21 @@ function downloadCsvFile(fileName, content) {
 }
 
 export default function App() {
-  const [csvText, setCsvText] = useState("");
-  const [fileName, setFileName] = useState("No file selected");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+
+  const [csvText, setCsvText] = useState(starterCsv);
+  const [fileName, setFileName] = useState("sample.csv");
+  const [hasUploadedCsv, setHasUploadedCsv] = useState(false);
+
   const [query, setQuery] = useState("");
   const [analysisText, setAnalysisText] = useState(
-    "Please upload a CSV file to start analysis."
+    "Use the sample data or upload your own CSV to start analysis."
   );
-  const [insightText, setInsightText] = useState("");
+  const [insightText, setInsightText] = useState(
+    "Dashboard is ready. Upload your CSV and ask data questions."
+  );
   const [recentQueries, setRecentQueries] = useState([]);
   const [tableSearch, setTableSearch] = useState("");
   const [rowsPerPage, setRowsPerPage] = useState(8);
@@ -125,7 +145,7 @@ export default function App() {
   const visibleRows = filteredRows.slice(0, rowsPerPage);
 
   const chartData = useMemo(() => {
-    if (!rows.length) return [];
+    if (!hasUploadedCsv || !rows.length) return [];
 
     if (chartType === "top") {
       return sortedBySales.slice(0, 5).map((item) => ({
@@ -161,8 +181,9 @@ export default function App() {
 
     return [];
   }, [
-    chartType,
+    hasUploadedCsv,
     rows,
+    chartType,
     sortedBySales,
     productHeader,
     salesHeader,
@@ -177,7 +198,7 @@ export default function App() {
   );
 
   useEffect(() => {
-    if (!rows.length) {
+    if (!chartData.length) {
       setChartAnimated(false);
       return;
     }
@@ -185,15 +206,24 @@ export default function App() {
     setChartAnimated(false);
     const timer = setTimeout(() => setChartAnimated(true), 120);
     return () => clearTimeout(timer);
-  }, [chartData, rows.length]);
+  }, [chartData]);
 
-  const defaultInsight = useMemo(() => {
-    if (!rows.length) return "No dataset uploaded yet.";
-    return `Dataset ready. ${rows.length} rows loaded. You can now view top products, monthly trends, and region analysis.`;
-  }, [rows]);
+  const handleLogin = (e) => {
+    e.preventDefault();
 
-  const suggestedInsightText =
-    "Suggested insights: compare region performance, find top products, view monthly trend, or check products above a sales threshold.";
+    if (!name.trim() || !email.trim()) {
+      alert("Please enter name and email.");
+      return;
+    }
+
+    setIsLoggedIn(true);
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setName("");
+    setEmail("");
+  };
 
   const handleUpload = (event) => {
     const file = event.target.files?.[0];
@@ -206,13 +236,15 @@ export default function App() {
 
       setCsvText(text);
       setFileName(file.name);
+      setHasUploadedCsv(true);
+      setChartType("top");
+      setQuery("");
       setAnalysisText("Dataset uploaded successfully.");
       setInsightText(
-        `Dataset ready. ${parsed.rows.length} rows loaded. You can now view top products, monthly trends, and region analysis.`
+        `Dataset ready. ${parsed.rows.length} rows loaded. You can now view top products, region insights, and chart analysis.`
       );
       setRecentQueries([]);
-      setQuery("");
-      setChartType("top");
+      setTableSearch("");
     };
     reader.readAsText(file);
   };
@@ -221,14 +253,14 @@ export default function App() {
     const q = (inputQuery || query).trim().toLowerCase();
 
     if (!rows.length) {
-      setAnalysisText("Please upload a CSV file to start analysis.");
+      setAnalysisText("No dataset available.");
       setInsightText("");
       return;
     }
 
     if (!q) {
       setAnalysisText("Please enter a question.");
-      setInsightText(defaultInsight);
+      setInsightText("Type a query like top product, total sales, or average.");
       return;
     }
 
@@ -288,17 +320,13 @@ export default function App() {
 
     if (q.includes("monthly sales")) {
       setChartType("top");
-      setAnalysisText("Monthly sales view is reflected in the dataset table and chart.");
-      setInsightText(
-        "Use the month and sales columns in your uploaded dataset to compare monthly performance."
-      );
+      setAnalysisText("Monthly sales can be reviewed using the month column in the table.");
+      setInsightText("Monthly comparison depends on your uploaded month-wise sales data.");
       return;
     }
 
     setAnalysisText("Query analyzed successfully.");
-    setInsightText(
-      "Custom query processed. Review chart, summary cards, and table for results."
-    );
+    setInsightText("Review the table, stats, and chart for updated insights.");
   };
 
   const quickQuery = (text) => {
@@ -325,6 +353,104 @@ export default function App() {
           background:
             radial-gradient(circle at top center, rgba(126, 87, 255, 0.22), transparent 25%),
             linear-gradient(180deg, #0a1022 0%, #09152e 100%);
+        }
+
+        .login-page {
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 24px;
+          animation: fadeIn 0.8s ease;
+        }
+
+        .login-card {
+          width: 100%;
+          max-width: 460px;
+          background: linear-gradient(180deg, rgba(11, 25, 64, 0.96), rgba(8, 20, 53, 0.96));
+          border: 1px solid rgba(102, 126, 234, 0.22);
+          border-radius: 30px;
+          padding: 34px 28px;
+          box-shadow: 0 16px 42px rgba(0, 0, 0, 0.28);
+        }
+
+        .login-logo {
+          width: 74px;
+          height: 74px;
+          border-radius: 22px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto 18px;
+          font-size: 30px;
+          background: linear-gradient(135deg, #7c4dff, #ff4da6);
+          box-shadow: 0 12px 30px rgba(124, 77, 255, 0.35);
+        }
+
+        .login-title {
+          text-align: center;
+          font-size: 40px;
+          font-weight: 800;
+          margin-bottom: 8px;
+        }
+
+        .login-subtitle {
+          text-align: center;
+          color: #c7d2fe;
+          line-height: 1.6;
+          margin-bottom: 24px;
+          font-size: 15px;
+        }
+
+        .form-group {
+          margin-bottom: 16px;
+        }
+
+        .label {
+          display: block;
+          margin-bottom: 8px;
+          color: #e5e7eb;
+          font-weight: 700;
+          font-size: 14px;
+        }
+
+        .input {
+          width: 100%;
+          height: 56px;
+          border-radius: 16px;
+          border: 1px solid rgba(145, 157, 215, 0.2);
+          background: rgba(255,255,255,0.06);
+          color: white;
+          padding: 0 18px;
+          font-size: 15px;
+          outline: none;
+        }
+
+        .input::placeholder {
+          color: #92a0d3;
+        }
+
+        .input:focus {
+          border-color: rgba(129, 140, 248, 0.7);
+          box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
+        }
+
+        .login-btn {
+          width: 100%;
+          height: 56px;
+          border: none;
+          border-radius: 16px;
+          background: linear-gradient(135deg, #6d5dfc, #8b5cf6);
+          color: white;
+          font-size: 16px;
+          font-weight: 800;
+          cursor: pointer;
+          transition: 0.25s ease;
+          margin-top: 8px;
+        }
+
+        .login-btn:hover {
+          transform: translateY(-2px);
         }
 
         .app {
@@ -354,8 +480,16 @@ export default function App() {
         .hero-header {
           display: flex;
           align-items: center;
+          justify-content: space-between;
           gap: 18px;
           margin-bottom: 26px;
+          flex-wrap: wrap;
+        }
+
+        .hero-left {
+          display: flex;
+          align-items: center;
+          gap: 18px;
         }
 
         .logo {
@@ -371,16 +505,27 @@ export default function App() {
         }
 
         .hero-title h1 {
-          font-size: 64px;
+          font-size: 58px;
           line-height: 1;
           font-weight: 800;
-          letter-spacing: -1.8px;
+          letter-spacing: -1.5px;
         }
 
         .hero-title p {
           margin-top: 6px;
           font-size: 18px;
           color: #c7d2fe;
+        }
+
+        .logout-btn {
+          border: none;
+          border-radius: 16px;
+          padding: 14px 22px;
+          background: linear-gradient(135deg, #ef4444, #dc2626);
+          color: white;
+          font-size: 15px;
+          font-weight: 800;
+          cursor: pointer;
         }
 
         .hero-grid {
@@ -518,6 +663,7 @@ export default function App() {
         .summary {
           padding: 34px;
           margin-bottom: 26px;
+          animation: riseUp 0.6s ease;
         }
 
         .section-title {
@@ -598,6 +744,7 @@ export default function App() {
         .ask-panel {
           padding: 30px;
           margin-bottom: 26px;
+          animation: riseUp 0.7s ease;
         }
 
         .ask-title {
@@ -739,6 +886,7 @@ export default function App() {
         .chart-panel {
           padding: 34px;
           margin-bottom: 26px;
+          animation: riseUp 0.8s ease;
         }
 
         .chart-wrap {
@@ -834,6 +982,7 @@ export default function App() {
 
         .table-panel {
           padding: 30px 30px 20px;
+          animation: riseUp 0.9s ease;
         }
 
         .table-head {
@@ -905,7 +1054,7 @@ export default function App() {
 
         @media (max-width: 1200px) {
           .hero-title h1 {
-            font-size: 48px;
+            font-size: 44px;
           }
 
           .stats-grid {
@@ -933,7 +1082,7 @@ export default function App() {
           }
 
           .hero-title h1 {
-            font-size: 38px;
+            font-size: 34px;
           }
 
           .chart-wrap {
@@ -946,12 +1095,12 @@ export default function App() {
             grid-template-columns: 1fr;
           }
 
-          .hero-header {
+          .hero-left {
             align-items: flex-start;
           }
 
           .hero-title h1 {
-            font-size: 30px;
+            font-size: 28px;
           }
 
           .hero-title p {
@@ -978,54 +1127,101 @@ export default function App() {
         }
       `}</style>
 
-      <div className="app">
-        <div className="container">
-          <section className="panel hero">
-            <div className="hero-header">
-              <div className="logo">✦</div>
-              <div className="hero-title">
-                <h1>AI Data Analyst Dashboard</h1>
-                <p>Upload data, ask questions, and get instant charts, insights, and summaries.</p>
-              </div>
+      {!isLoggedIn ? (
+        <div className="login-page">
+          <div className="login-card">
+            <div className="login-logo">✦</div>
+            <div className="login-title">DataVista AI</div>
+            <div className="login-subtitle">
+              Login to access your professional AI data analyst dashboard with upload, insights, charts, and table analysis.
             </div>
 
-            <div className="hero-grid">
-              <div className="upload-card">
-                <label className="upload-inner">
-                  <div className="upload-icon">☁</div>
-                  <h3>Upload CSV File</h3>
-                  <p>Drag & drop or click to upload your CSV dataset</p>
-                  <p style={{ marginTop: 10, fontSize: 14 }}>Example columns: product, sales, month, region</p>
-                  <input className="file-input" type="file" accept=".csv" onChange={handleUpload} />
-                </label>
+            <form onSubmit={handleLogin}>
+              <div className="form-group">
+                <label className="label">Full Name</label>
+                <input
+                  className="input"
+                  type="text"
+                  placeholder="Enter your full name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
               </div>
 
-              <div className="how-card">
-                <h3>How it works</h3>
-                <ul className="how-list">
-                  <li>1. Upload file</li>
-                  <li>2. Ask question</li>
-                  <li>3. View chart + insights</li>
-                </ul>
+              <div className="form-group">
+                <label className="label">Email Address</label>
+                <input
+                  className="input"
+                  type="email"
+                  placeholder="Enter your email address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
               </div>
-            </div>
 
-            {rows.length > 0 && (
+              <button type="submit" className="login-btn">
+                Login to Dashboard
+              </button>
+            </form>
+          </div>
+        </div>
+      ) : (
+        <div className="app">
+          <div className="container">
+            <section className="panel hero">
+              <div className="hero-header">
+                <div className="hero-left">
+                  <div className="logo">✦</div>
+                  <div className="hero-title">
+                    <h1>AI Data Analyst Dashboard</h1>
+                    <p>Upload data, ask questions, and get instant charts, insights, and summaries.</p>
+                  </div>
+                </div>
+
+                <button className="logout-btn" onClick={handleLogout}>
+                  Logout
+                </button>
+              </div>
+
+              <div className="hero-grid">
+                <div className="upload-card">
+                  <label className="upload-inner">
+                    <div className="upload-icon">☁</div>
+                    <h3>Upload CSV File</h3>
+                    <p>Drag & drop or click to upload your CSV dataset</p>
+                    <p style={{ marginTop: 10, fontSize: 14 }}>
+                      Example columns: product, sales, month, region
+                    </p>
+                    <input className="file-input" type="file" accept=".csv" onChange={handleUpload} />
+                  </label>
+                </div>
+
+                <div className="how-card">
+                  <h3>How it works</h3>
+                  <ul className="how-list">
+                    <li>1. Upload file</li>
+                    <li>2. Ask question</li>
+                    <li>3. View chart + insights</li>
+                  </ul>
+                </div>
+              </div>
+
               <div className="status-bar">
                 <div className="dataset-pill">
                   <span className="dot"></span>
-                  Dataset ready: {fileName}
+                  Current dataset: {fileName}
                 </div>
 
                 <div className="button-row">
                   <button
                     className="btn btn-reset"
                     onClick={() => {
-                      setCsvText("");
-                      setFileName("No file selected");
+                      setCsvText(starterCsv);
+                      setFileName("sample.csv");
+                      setHasUploadedCsv(false);
                       setQuery("");
-                      setAnalysisText("Please upload a CSV file to start analysis.");
-                      setInsightText("");
+                      setAnalysisText("Use the sample data or upload your own CSV to start analysis.");
+                      setInsightText("Dashboard is ready. Upload your CSV and ask data questions.");
                       setRecentQueries([]);
                       setTableSearch("");
                       setChartType("top");
@@ -1042,242 +1238,240 @@ export default function App() {
                   </button>
                 </div>
               </div>
-            )}
-          </section>
+            </section>
 
-          {rows.length > 0 && (
-            <>
-              <section className="panel summary">
-                <h2 className="section-title">Dataset Summary</h2>
+            <section className="panel summary">
+              <h2 className="section-title">Dataset Summary</h2>
 
-                <div className="stats-grid">
-                  <div className="stat-card">
-                    <h4>Rows</h4>
-                    <div className="value">{rows.length}</div>
-                  </div>
-
-                  <div className="stat-card">
-                    <h4>Columns</h4>
-                    <div className="value">{headers.length}</div>
-                  </div>
-
-                  <div className="stat-card">
-                    <h4>Products</h4>
-                    <div className="value">{uniqueProducts}</div>
-                  </div>
-
-                  <div className="stat-card">
-                    <h4>Regions</h4>
-                    <div className="value">{uniqueRegions}</div>
-                  </div>
-
-                  <div className="stat-card">
-                    <h4>Total Sales</h4>
-                    <div className="value">{formatNumber(totalSales)}</div>
-                  </div>
-
-                  <div className="stat-card">
-                    <h4>Average Sales</h4>
-                    <div className="value">{averageSales.toFixed(2)}</div>
-                  </div>
+              <div className="stats-grid">
+                <div className="stat-card">
+                  <h4>Rows</h4>
+                  <div className="value">{rows.length}</div>
                 </div>
 
-                <div className="dual-grid">
-                  <div className="mini-panel">
-                    <h3>Highlights</h3>
-                    <ul>
-                      <li>Top selling product: <strong>{topProduct?.[productHeader] || "-"}</strong></li>
-                      <li>Highest sales value: <strong>{topProduct?.[salesHeader] || 0}</strong></li>
-                      <li>Dataset file: <strong>{fileName}</strong></li>
-                    </ul>
-                  </div>
-
-                  <div className="mini-panel">
-                    <h3>Data Health</h3>
-                    <ul>
-                      <li>Dataset successfully parsed and ready for analysis.</li>
-                      <li>Search, chart, and summary cards are active.</li>
-                      <li>Best results come from clean column names.</li>
-                    </ul>
-                  </div>
+                <div className="stat-card">
+                  <h4>Columns</h4>
+                  <div className="value">{headers.length}</div>
                 </div>
-              </section>
 
-              <section className="panel ask-panel">
-                <h2 className="ask-title">Ask Your Data</h2>
+                <div className="stat-card">
+                  <h4>Products</h4>
+                  <div className="value">{uniqueProducts}</div>
+                </div>
 
-                <div className="query-row">
-                  <input
-                    className="query-input"
-                    type="text"
-                    placeholder="Ask a question..."
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                  />
-                  <button className="btn analyze-btn" onClick={() => runAnalysis()}>
-                    Analyze
+                <div className="stat-card">
+                  <h4>Regions</h4>
+                  <div className="value">{uniqueRegions}</div>
+                </div>
+
+                <div className="stat-card">
+                  <h4>Total Sales</h4>
+                  <div className="value">{formatNumber(totalSales)}</div>
+                </div>
+
+                <div className="stat-card">
+                  <h4>Average Sales</h4>
+                  <div className="value">{averageSales.toFixed(2)}</div>
+                </div>
+              </div>
+
+              <div className="dual-grid">
+                <div className="mini-panel">
+                  <h3>Highlights</h3>
+                  <ul>
+                    <li>Top selling product: <strong>{topProduct?.[productHeader] || "-"}</strong></li>
+                    <li>Highest sales value: <strong>{topProduct?.[salesHeader] || 0}</strong></li>
+                    <li>Dataset file: <strong>{fileName}</strong></li>
+                  </ul>
+                </div>
+
+                <div className="mini-panel">
+                  <h3>Data Health</h3>
+                  <ul>
+                    <li>Dataset successfully parsed and ready for analysis.</li>
+                    <li>Search, chart, and summary cards are active.</li>
+                    <li>Best results come from clean column names.</li>
+                  </ul>
+                </div>
+              </div>
+            </section>
+
+            <section className="panel ask-panel">
+              <h2 className="ask-title">Ask Your Data</h2>
+
+              <div className="query-row">
+                <input
+                  className="query-input"
+                  type="text"
+                  placeholder="Ask a question..."
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+                <button className="btn analyze-btn" onClick={() => runAnalysis()}>
+                  Analyze
+                </button>
+              </div>
+
+              <div className="chip-row">
+                {[
+                  "top product",
+                  "average",
+                  "total sales",
+                  "monthly sales",
+                  "region wise sales",
+                  "lowest product",
+                ].map((chip) => (
+                  <button key={chip} className="chip" onClick={() => quickQuery(chip)}>
+                    {chip}
                   </button>
+                ))}
+              </div>
+
+              <div className="info-box">
+                Suggested insights: compare region performance, find top products, view monthly trend, or check products above a sales threshold.
+              </div>
+
+              <div className="query-result">{analysisText}</div>
+
+              <div className="success-box">
+                <strong>Insight:</strong> {insightText}
+              </div>
+
+              <div className="recent-box">
+                <h3>Recent Queries</h3>
+                <div className="recent-query-row">
+                  {recentQueries.length ? (
+                    recentQueries.map((item) => (
+                      <span key={item} className="recent-pill">
+                        {item}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="recent-pill">No recent queries yet</span>
+                  )}
                 </div>
+              </div>
 
-                <div className="chip-row">
-                  {[
-                    "top product",
-                    "average",
-                    "total sales",
-                    "monthly sales",
-                    "region wise sales",
-                    "lowest product",
-                  ].map((chip) => (
-                    <button key={chip} className="chip" onClick={() => quickQuery(chip)}>
-                      {chip}
-                    </button>
-                  ))}
-                </div>
+              <div className="small-meta">
+                Total Rows: {rows.length} | Total Columns: {headers.length}
+              </div>
+            </section>
 
-                <div className="info-box">{suggestedInsightText}</div>
+            {hasUploadedCsv && chartData.length > 0 && (
+              <section className="panel chart-panel">
+                <h2 className="section-title">
+                  {chartType === "top" && "Top Product Sales"}
+                  {chartType === "average" && "Average Sales"}
+                  {chartType === "total" && "Total Sales"}
+                  {chartType === "lowest" && "Lowest Product Sales"}
+                  {chartType === "region" && "Region Wise Sales"}
+                </h2>
 
-                <div className="query-result">{analysisText}</div>
-
-                <div className="success-box">
-                  <strong>Insight:</strong> {insightText || defaultInsight}
-                </div>
-
-                <div className="recent-box">
-                  <h3>Recent Queries</h3>
-                  <div className="recent-query-row">
-                    {recentQueries.length ? (
-                      recentQueries.map((item) => (
-                        <span key={item} className="recent-pill">
-                          {item}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="recent-pill">No recent queries yet</span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="small-meta">
-                  Total Rows: {rows.length} | Total Columns: {headers.length}
-                </div>
-              </section>
-
-              {chartData.length > 0 && (
-                <section className="panel chart-panel">
-                  <h2 className="section-title">
+                <div className="legend">
+                  <span className="legend-box"></span>
+                  <span>
                     {chartType === "top" && "Top Product Sales"}
                     {chartType === "average" && "Average Sales"}
                     {chartType === "total" && "Total Sales"}
                     {chartType === "lowest" && "Lowest Product Sales"}
                     {chartType === "region" && "Region Wise Sales"}
-                  </h2>
+                  </span>
+                </div>
 
-                  <div className="legend">
-                    <span className="legend-box"></span>
-                    <span>
-                      {chartType === "top" && "Top Product Sales"}
-                      {chartType === "average" && "Average Sales"}
-                      {chartType === "total" && "Total Sales"}
-                      {chartType === "lowest" && "Lowest Product Sales"}
-                      {chartType === "region" && "Region Wise Sales"}
-                    </span>
-                  </div>
+                <div className="chart-wrap">
+                  <div className="chart-area">
+                    <div className="y-axis">
+                      {[0, 25, 50, 75, 100].reverse().map((pct, index) => (
+                        <div
+                          key={pct}
+                          className="y-label"
+                          style={{ bottom: `${index * 25}%` }}
+                        >
+                          {formatNumber(Math.round((maxChartValue * pct) / 100))}
+                        </div>
+                      ))}
+                    </div>
 
-                  <div className="chart-wrap">
-                    <div className="chart-area">
-                      <div className="y-axis">
-                        {[0, 25, 50, 75, 100].reverse().map((pct, index) => (
-                          <div
-                            key={pct}
-                            className="y-label"
-                            style={{ bottom: `${index * 25}%` }}
-                          >
-                            {formatNumber(Math.round((maxChartValue * pct) / 100))}
+                    <div className="plot">
+                      {[0, 25, 50, 75, 100].map((pct) => (
+                        <div
+                          key={pct}
+                          className="grid-line"
+                          style={{ bottom: `${pct}%` }}
+                        />
+                      ))}
+
+                      {chartData.map((item) => {
+                        const rawHeight = ((item.value || 0) / maxChartValue) * 100;
+                        const barHeight = chartAnimated ? `${Math.max(rawHeight, 8)}%` : "0%";
+
+                        return (
+                          <div className="bar-group" key={item.name}>
+                            <div className="bar" style={{ height: barHeight }} />
+                            <div className="bar-label-x">{item.name}</div>
                           </div>
-                        ))}
-                      </div>
-
-                      <div className="plot">
-                        {[0, 25, 50, 75, 100].map((pct) => (
-                          <div
-                            key={pct}
-                            className="grid-line"
-                            style={{ bottom: `${pct}%` }}
-                          />
-                        ))}
-
-                        {chartData.map((item) => {
-                          const rawHeight = ((item.value || 0) / maxChartValue) * 100;
-                          const barHeight = chartAnimated ? `${Math.max(rawHeight, 8)}%` : "0%";
-
-                          return (
-                            <div className="bar-group" key={item.name}>
-                              <div className="bar" style={{ height: barHeight }} />
-                              <div className="bar-label-x">{item.name}</div>
-                            </div>
-                          );
-                        })}
-                      </div>
+                        );
+                      })}
                     </div>
                   </div>
-                </section>
-              )}
-
-              <section className="panel table-panel">
-                <div className="table-head">
-                  <h2>Uploaded Data Table</h2>
-
-                  <div className="table-controls">
-                    <input
-                      className="table-search"
-                      type="text"
-                      placeholder="Search in table..."
-                      value={tableSearch}
-                      onChange={(e) => setTableSearch(e.target.value)}
-                    />
-
-                    <select
-                      className="rows-select"
-                      value={rowsPerPage}
-                      onChange={(e) => setRowsPerPage(Number(e.target.value))}
-                    >
-                      <option value={5}>5 rows</option>
-                      <option value={8}>8 rows</option>
-                      <option value={10}>10 rows</option>
-                      <option value={15}>15 rows</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        {headers.map((header) => (
-                          <th key={header}>{header}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {visibleRows.map((row, index) => (
-                        <tr key={index}>
-                          {headers.map((header) => (
-                            <td key={header}>
-                              {typeof row[header] === "number"
-                                ? formatNumber(row[header])
-                                : row[header]}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
                 </div>
               </section>
-            </>
-          )}
+            )}
+
+            <section className="panel table-panel">
+              <div className="table-head">
+                <h2>Uploaded Data Table</h2>
+
+                <div className="table-controls">
+                  <input
+                    className="table-search"
+                    type="text"
+                    placeholder="Search in table..."
+                    value={tableSearch}
+                    onChange={(e) => setTableSearch(e.target.value)}
+                  />
+
+                  <select
+                    className="rows-select"
+                    value={rowsPerPage}
+                    onChange={(e) => setRowsPerPage(Number(e.target.value))}
+                  >
+                    <option value={5}>5 rows</option>
+                    <option value={8}>8 rows</option>
+                    <option value={10}>10 rows</option>
+                    <option value={15}>15 rows</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      {headers.map((header) => (
+                        <th key={header}>{header}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleRows.map((row, index) => (
+                      <tr key={index}>
+                        {headers.map((header) => (
+                          <td key={header}>
+                            {typeof row[header] === "number"
+                              ? formatNumber(row[header])
+                              : row[header]}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 }
