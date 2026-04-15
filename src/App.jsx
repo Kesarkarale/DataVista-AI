@@ -61,7 +61,7 @@ export default function App() {
   const [email, setEmail] = useState("");
 
   const [csvText, setCsvText] = useState(starterCsv);
-  const [fileName, setFileName] = useState("sample.csv");
+  const [fileName, setFileName] = useState("");
   const [hasUploadedCsv, setHasUploadedCsv] = useState(false);
 
   const [query, setQuery] = useState("");
