@@ -1133,7 +1133,7 @@ export default function App() {
             <div className="login-logo">✦</div>
             <div className="login-title">DataVista AI</div>
             <div className="login-subtitle">
-              Login to access your professional AI data analyst dashboard with upload, insights, charts, and table analysis.
+              Login to access your professional DataVista AI dashboard with upload, insights, charts, and table analysis.
             </div>
 
             <form onSubmit={handleLogin}>
@@ -1173,7 +1173,7 @@ export default function App() {
                 <div className="hero-left">
                   <div className="logo">✦</div>
                   <div className="hero-title">
-                    <h1>AI Data Analyst Dashboard</h1>
+                    <h1>DataVista AI Dashboard</h1>
                     <p>Upload data, ask questions, and get instant charts, insights, and summaries.</p>
                   </div>
                 </div>
