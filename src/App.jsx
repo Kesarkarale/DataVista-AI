@@ -1,17 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 
-const sampleCsv = `PRODUCT,REGION,MONTH,SALES
-Laptop,West,Jan,20000
-Mobile,East,Feb,15000
-Tablet,North,Mar,12000
-Camera,South,Apr,11000
-Monitor,West,May,9000
-Keyboard,East,Jun,7000
-Mouse,North,Jul,6500
-Printer,South,Aug,8000
-Speaker,West,Sep,6000
-Router,East,Oct,7500`;
-
 function parseCSV(text) {
   const lines = text
     .split(/\r?\n/)
@@ -25,15 +13,22 @@ function parseCSV(text) {
   const rows = lines.slice(1).map((line) => {
     const values = line.split(",").map((v) => v.trim());
     const row = {};
+
     headers.forEach((header, index) => {
       const raw = values[index] ?? "";
       const num = Number(raw);
       row[header] = raw !== "" && !Number.isNaN(num) ? num : raw;
     });
+
     return row;
   });
 
   return { headers, rows };
+}
+
+function formatNumber(value) {
+  if (typeof value !== "number" || Number.isNaN(value)) return value;
+  return new Intl.NumberFormat("en-IN").format(value);
 }
 
 function downloadCsvFile(fileName, content) {
@@ -48,14 +43,9 @@ function downloadCsvFile(fileName, content) {
   URL.revokeObjectURL(url);
 }
 
-function formatNumber(value) {
-  if (typeof value !== "number" || Number.isNaN(value)) return value;
-  return new Intl.NumberFormat("en-IN").format(value);
-}
-
 export default function App() {
-  const [csvText, setCsvText] = useState(sampleCsv);
-  const [fileName, setFileName] = useState("sample.csv");
+  const [csvText, setCsvText] = useState("");
+  const [fileName, setFileName] = useState("No file selected");
   const [query, setQuery] = useState("");
   const [analysisText, setAnalysisText] = useState(
     "Please upload a CSV file to start analysis."
@@ -65,17 +55,25 @@ export default function App() {
   const [tableSearch, setTableSearch] = useState("");
   const [rowsPerPage, setRowsPerPage] = useState(8);
   const [chartAnimated, setChartAnimated] = useState(false);
+  const [chartType, setChartType] = useState("top");
 
   const { headers, rows } = useMemo(() => parseCSV(csvText), [csvText]);
 
-  const productHeader = headers.find((h) => h.toLowerCase().includes("product")) || headers[0] || "";
-  const regionHeader = headers.find((h) => h.toLowerCase().includes("region")) || "";
-  const monthHeader = headers.find((h) => h.toLowerCase().includes("month")) || "";
-  const salesHeader = headers.find((h) => h.toLowerCase().includes("sales")) || "";
+  const productHeader =
+    headers.find((h) => h.toLowerCase().includes("product")) || headers[0] || "";
+  const regionHeader =
+    headers.find((h) => h.toLowerCase().includes("region")) || "";
+  const monthHeader =
+    headers.find((h) => h.toLowerCase().includes("month")) || "";
+  const salesHeader =
+    headers.find((h) => h.toLowerCase().includes("sales")) || "";
 
   const totalSales = useMemo(() => {
     if (!salesHeader) return 0;
-    return rows.reduce((sum, row) => sum + (typeof row[salesHeader] === "number" ? row[salesHeader] : 0), 0);
+    return rows.reduce((sum, row) => {
+      const sales = typeof row[salesHeader] === "number" ? row[salesHeader] : 0;
+      return sum + sales;
+    }, 0);
   }, [rows, salesHeader]);
 
   const averageSales = rows.length ? totalSales / rows.length : 0;
@@ -100,11 +98,22 @@ export default function App() {
   const topProduct = sortedBySales[0];
   const lowestProduct = sortedBySales[sortedBySales.length - 1];
 
-  const productChartData = sortedBySales.slice(0, 5);
-  const maxSales = Math.max(...productChartData.map((item) => item[salesHeader] || 0), 1);
+  const regionWiseSales = useMemo(() => {
+    if (!regionHeader || !salesHeader) return [];
+    const map = {};
+
+    rows.forEach((row) => {
+      const region = row[regionHeader];
+      const sales = typeof row[salesHeader] === "number" ? row[salesHeader] : 0;
+      map[region] = (map[region] || 0) + sales;
+    });
+
+    return Object.entries(map).map(([name, value]) => ({ name, value }));
+  }, [rows, regionHeader, salesHeader]);
 
   const filteredRows = useMemo(() => {
     if (!tableSearch.trim()) return rows;
+
     const q = tableSearch.toLowerCase();
     return rows.filter((row) =>
       headers.some((header) =>
@@ -115,11 +124,68 @@ export default function App() {
 
   const visibleRows = filteredRows.slice(0, rowsPerPage);
 
+  const chartData = useMemo(() => {
+    if (!rows.length) return [];
+
+    if (chartType === "top") {
+      return sortedBySales.slice(0, 5).map((item) => ({
+        name: String(item[productHeader]),
+        value: item[salesHeader],
+      }));
+    }
+
+    if (chartType === "average") {
+      return rows.slice(0, 5).map((row) => ({
+        name: String(row[productHeader]),
+        value: averageSales,
+      }));
+    }
+
+    if (chartType === "total") {
+      return rows.slice(0, 5).map((row) => ({
+        name: String(row[productHeader]),
+        value: totalSales,
+      }));
+    }
+
+    if (chartType === "lowest") {
+      return [...sortedBySales].slice(-5).map((item) => ({
+        name: String(item[productHeader]),
+        value: item[salesHeader],
+      }));
+    }
+
+    if (chartType === "region") {
+      return regionWiseSales;
+    }
+
+    return [];
+  }, [
+    chartType,
+    rows,
+    sortedBySales,
+    productHeader,
+    salesHeader,
+    averageSales,
+    totalSales,
+    regionWiseSales,
+  ]);
+
+  const maxChartValue = Math.max(
+    ...chartData.map((item) => (typeof item.value === "number" ? item.value : 0)),
+    1
+  );
+
   useEffect(() => {
+    if (!rows.length) {
+      setChartAnimated(false);
+      return;
+    }
+
     setChartAnimated(false);
     const timer = setTimeout(() => setChartAnimated(true), 120);
     return () => clearTimeout(timer);
-  }, [csvText]);
+  }, [chartData, rows.length]);
 
   const defaultInsight = useMemo(() => {
     if (!rows.length) return "No dataset uploaded yet.";
@@ -136,18 +202,24 @@ export default function App() {
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = String(e.target?.result || "");
+      const parsed = parseCSV(text);
+
       setCsvText(text);
       setFileName(file.name);
       setAnalysisText("Dataset uploaded successfully.");
-      setInsightText(`Dataset ready. ${parseCSV(text).rows.length} rows loaded. You can now view top products, monthly trends, and region analysis.`);
+      setInsightText(
+        `Dataset ready. ${parsed.rows.length} rows loaded. You can now view top products, monthly trends, and region analysis.`
+      );
       setRecentQueries([]);
       setQuery("");
+      setChartType("top");
     };
     reader.readAsText(file);
   };
 
   const runAnalysis = (inputQuery) => {
     const q = (inputQuery || query).trim().toLowerCase();
+
     if (!rows.length) {
       setAnalysisText("Please upload a CSV file to start analysis.");
       setInsightText("");
@@ -163,6 +235,7 @@ export default function App() {
     setRecentQueries((prev) => [q, ...prev.filter((item) => item !== q)].slice(0, 5));
 
     if (q.includes("top product")) {
+      setChartType("top");
       if (topProduct) {
         setAnalysisText(
           `Top product is ${topProduct[productHeader]} with sales ${topProduct[salesHeader]}`
@@ -174,7 +247,24 @@ export default function App() {
       return;
     }
 
+    if (q.includes("average")) {
+      setChartType("average");
+      setAnalysisText(`Average sales is ${averageSales.toFixed(2)}`);
+      setInsightText(
+        `The average sales value across the dataset is ${averageSales.toFixed(2)}.`
+      );
+      return;
+    }
+
+    if (q.includes("total sales")) {
+      setChartType("total");
+      setAnalysisText(`Total sales is ${totalSales}`);
+      setInsightText(`The dataset generated total sales of ${totalSales}.`);
+      return;
+    }
+
     if (q.includes("lowest product")) {
+      setChartType("lowest");
       if (lowestProduct) {
         setAnalysisText(
           `Lowest product is ${lowestProduct[productHeader]} with sales ${lowestProduct[salesHeader]}`
@@ -186,41 +276,29 @@ export default function App() {
       return;
     }
 
-    if (q.includes("average")) {
-      setAnalysisText(`Average sales is ${averageSales.toFixed(2)}`);
-      setInsightText(`The average sales value across the dataset is ${averageSales.toFixed(2)}.`);
-      return;
-    }
-
-    if (q.includes("total sales")) {
-      setAnalysisText(`Total sales is ${totalSales}`);
-      setInsightText(`The dataset generated total sales of ${totalSales}.`);
-      return;
-    }
-
-    if (q.includes("monthly sales")) {
-      setAnalysisText("Monthly sales view is reflected in the dataset table and chart.");
-      setInsightText("Use the month column with sales values to compare monthly sales performance.");
-      return;
-    }
-
     if (q.includes("region wise sales")) {
-      const regionMap = {};
-      rows.forEach((row) => {
-        const region = row[regionHeader];
-        const sales = typeof row[salesHeader] === "number" ? row[salesHeader] : 0;
-        regionMap[region] = (regionMap[region] || 0) + sales;
-      });
-      const summary = Object.entries(regionMap)
-        .map(([region, sales]) => `${region}: ${sales}`)
+      setChartType("region");
+      const summary = regionWiseSales
+        .map((item) => `${item.name}: ${item.value}`)
         .join(", ");
       setAnalysisText(`Region wise sales: ${summary}`);
       setInsightText("Region comparison completed successfully.");
       return;
     }
 
+    if (q.includes("monthly sales")) {
+      setChartType("top");
+      setAnalysisText("Monthly sales view is reflected in the dataset table and chart.");
+      setInsightText(
+        "Use the month and sales columns in your uploaded dataset to compare monthly performance."
+      );
+      return;
+    }
+
     setAnalysisText("Query analyzed successfully.");
-    setInsightText("Custom query processed. Review chart, summary cards, and table for results.");
+    setInsightText(
+      "Custom query processed. Review chart, summary cards, and table for results."
+    );
   };
 
   const quickQuery = (text) => {
@@ -416,7 +494,7 @@ export default function App() {
           font-size: 16px;
           font-weight: 700;
           cursor: pointer;
-          transition: transform 0.24s ease, box-shadow 0.24s ease, opacity 0.24s ease;
+          transition: transform 0.24s ease, box-shadow 0.24s ease;
           color: white;
         }
 
@@ -932,251 +1010,272 @@ export default function App() {
               </div>
             </div>
 
-            <div className="status-bar">
-              <div className="dataset-pill">
-                <span className="dot"></span>
-                Dataset ready: {fileName}
-              </div>
+            {rows.length > 0 && (
+              <div className="status-bar">
+                <div className="dataset-pill">
+                  <span className="dot"></span>
+                  Dataset ready: {fileName}
+                </div>
 
-              <div className="button-row">
-                <button
-                  className="btn btn-reset"
-                  onClick={() => {
-                    setCsvText(sampleCsv);
-                    setFileName("sample.csv");
-                    setQuery("");
-                    setAnalysisText("Please upload a CSV file to start analysis.");
-                    setInsightText("");
-                    setRecentQueries([]);
-                    setTableSearch("");
-                  }}
-                >
-                  Reset
-                </button>
+                <div className="button-row">
+                  <button
+                    className="btn btn-reset"
+                    onClick={() => {
+                      setCsvText("");
+                      setFileName("No file selected");
+                      setQuery("");
+                      setAnalysisText("Please upload a CSV file to start analysis.");
+                      setInsightText("");
+                      setRecentQueries([]);
+                      setTableSearch("");
+                      setChartType("top");
+                    }}
+                  >
+                    Reset
+                  </button>
 
-                <button
-                  className="btn btn-download"
-                  onClick={() => downloadCsvFile(fileName, csvText)}
-                >
-                  Download CSV
-                </button>
+                  <button
+                    className="btn btn-download"
+                    onClick={() => downloadCsvFile(fileName, csvText)}
+                  >
+                    Download CSV
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
           </section>
 
-          <section className="panel summary">
-            <h2 className="section-title">Dataset Summary</h2>
+          {rows.length > 0 && (
+            <>
+              <section className="panel summary">
+                <h2 className="section-title">Dataset Summary</h2>
 
-            <div className="stats-grid">
-              <div className="stat-card">
-                <h4>Rows</h4>
-                <div className="value">{rows.length}</div>
-              </div>
+                <div className="stats-grid">
+                  <div className="stat-card">
+                    <h4>Rows</h4>
+                    <div className="value">{rows.length}</div>
+                  </div>
 
-              <div className="stat-card">
-                <h4>Columns</h4>
-                <div className="value">{headers.length}</div>
-              </div>
+                  <div className="stat-card">
+                    <h4>Columns</h4>
+                    <div className="value">{headers.length}</div>
+                  </div>
 
-              <div className="stat-card">
-                <h4>Products</h4>
-                <div className="value">{uniqueProducts}</div>
-              </div>
+                  <div className="stat-card">
+                    <h4>Products</h4>
+                    <div className="value">{uniqueProducts}</div>
+                  </div>
 
-              <div className="stat-card">
-                <h4>Regions</h4>
-                <div className="value">{uniqueRegions}</div>
-              </div>
+                  <div className="stat-card">
+                    <h4>Regions</h4>
+                    <div className="value">{uniqueRegions}</div>
+                  </div>
 
-              <div className="stat-card">
-                <h4>Total Sales</h4>
-                <div className="value">{formatNumber(totalSales)}</div>
-              </div>
+                  <div className="stat-card">
+                    <h4>Total Sales</h4>
+                    <div className="value">{formatNumber(totalSales)}</div>
+                  </div>
 
-              <div className="stat-card">
-                <h4>Average Sales</h4>
-                <div className="value">{averageSales.toFixed(2)}</div>
-              </div>
-            </div>
+                  <div className="stat-card">
+                    <h4>Average Sales</h4>
+                    <div className="value">{averageSales.toFixed(2)}</div>
+                  </div>
+                </div>
 
-            <div className="dual-grid">
-              <div className="mini-panel">
-                <h3>Highlights</h3>
-                <ul>
-                  <li>Top selling product: <strong>{topProduct?.[productHeader] || "-"}</strong></li>
-                  <li>Highest sales value: <strong>{topProduct?.[salesHeader] || 0}</strong></li>
-                  <li>Dataset file: <strong>{fileName}</strong></li>
-                </ul>
-              </div>
+                <div className="dual-grid">
+                  <div className="mini-panel">
+                    <h3>Highlights</h3>
+                    <ul>
+                      <li>Top selling product: <strong>{topProduct?.[productHeader] || "-"}</strong></li>
+                      <li>Highest sales value: <strong>{topProduct?.[salesHeader] || 0}</strong></li>
+                      <li>Dataset file: <strong>{fileName}</strong></li>
+                    </ul>
+                  </div>
 
-              <div className="mini-panel">
-                <h3>Data Health</h3>
-                <ul>
-                  <li>Dataset successfully parsed and ready for analysis.</li>
-                  <li>Search, chart, and summary cards are active.</li>
-                  <li>Best results come from clean column names.</li>
-                </ul>
-              </div>
-            </div>
-          </section>
+                  <div className="mini-panel">
+                    <h3>Data Health</h3>
+                    <ul>
+                      <li>Dataset successfully parsed and ready for analysis.</li>
+                      <li>Search, chart, and summary cards are active.</li>
+                      <li>Best results come from clean column names.</li>
+                    </ul>
+                  </div>
+                </div>
+              </section>
 
-          <section className="panel ask-panel">
-            <h2 className="ask-title">Ask Your Data</h2>
+              <section className="panel ask-panel">
+                <h2 className="ask-title">Ask Your Data</h2>
 
-            <div className="query-row">
-              <input
-                className="query-input"
-                type="text"
-                placeholder="Ask a question..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-              <button className="btn analyze-btn" onClick={() => runAnalysis()}>
-                Analyze
-              </button>
-            </div>
+                <div className="query-row">
+                  <input
+                    className="query-input"
+                    type="text"
+                    placeholder="Ask a question..."
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                  />
+                  <button className="btn analyze-btn" onClick={() => runAnalysis()}>
+                    Analyze
+                  </button>
+                </div>
 
-            <div className="chip-row">
-              {[
-                "top product",
-                "average",
-                "total sales",
-                "monthly sales",
-                "region wise sales",
-                "lowest product",
-              ].map((chip) => (
-                <button key={chip} className="chip" onClick={() => quickQuery(chip)}>
-                  {chip}
-                </button>
-              ))}
-            </div>
+                <div className="chip-row">
+                  {[
+                    "top product",
+                    "average",
+                    "total sales",
+                    "monthly sales",
+                    "region wise sales",
+                    "lowest product",
+                  ].map((chip) => (
+                    <button key={chip} className="chip" onClick={() => quickQuery(chip)}>
+                      {chip}
+                    </button>
+                  ))}
+                </div>
 
-            <div className="info-box">{suggestedInsightText}</div>
+                <div className="info-box">{suggestedInsightText}</div>
 
-            <div className="query-result">{analysisText}</div>
+                <div className="query-result">{analysisText}</div>
 
-            <div className="success-box">
-              <strong>Insight:</strong> {insightText || defaultInsight}
-            </div>
+                <div className="success-box">
+                  <strong>Insight:</strong> {insightText || defaultInsight}
+                </div>
 
-            <div className="recent-box">
-              <h3>Recent Queries</h3>
-              <div className="recent-query-row">
-                {recentQueries.length ? (
-                  recentQueries.map((item) => (
-                    <span key={item} className="recent-pill">
-                      {item}
+                <div className="recent-box">
+                  <h3>Recent Queries</h3>
+                  <div className="recent-query-row">
+                    {recentQueries.length ? (
+                      recentQueries.map((item) => (
+                        <span key={item} className="recent-pill">
+                          {item}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="recent-pill">No recent queries yet</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="small-meta">
+                  Total Rows: {rows.length} | Total Columns: {headers.length}
+                </div>
+              </section>
+
+              {chartData.length > 0 && (
+                <section className="panel chart-panel">
+                  <h2 className="section-title">
+                    {chartType === "top" && "Top Product Sales"}
+                    {chartType === "average" && "Average Sales"}
+                    {chartType === "total" && "Total Sales"}
+                    {chartType === "lowest" && "Lowest Product Sales"}
+                    {chartType === "region" && "Region Wise Sales"}
+                  </h2>
+
+                  <div className="legend">
+                    <span className="legend-box"></span>
+                    <span>
+                      {chartType === "top" && "Top Product Sales"}
+                      {chartType === "average" && "Average Sales"}
+                      {chartType === "total" && "Total Sales"}
+                      {chartType === "lowest" && "Lowest Product Sales"}
+                      {chartType === "region" && "Region Wise Sales"}
                     </span>
-                  ))
-                ) : (
-                  <span className="recent-pill">No recent queries yet</span>
-                )}
-              </div>
-            </div>
+                  </div>
 
-            <div className="small-meta">
-              Total Rows: {rows.length} | Total Columns: {headers.length}
-            </div>
-          </section>
-
-          <section className="panel chart-panel">
-            <h2 className="section-title">Top Product Sales</h2>
-
-            <div className="legend">
-              <span className="legend-box"></span>
-              <span>Top Product Sales</span>
-            </div>
-
-            <div className="chart-wrap">
-              <div className="chart-area">
-                <div className="y-axis">
-                  {[0, 5000, 10000, 15000, 20000].reverse().map((value, index) => (
-                    <div
-                      key={value}
-                      className="y-label"
-                      style={{ bottom: `${index * 25}%` }}
-                    >
-                      {formatNumber(value)}
-                    </div>
-                  ))}
-                </div>
-
-                <div className="plot">
-                  {[0, 25, 50, 75, 100].map((pct) => (
-                    <div
-                      key={pct}
-                      className="grid-line"
-                      style={{ bottom: `${pct}%` }}
-                    />
-                  ))}
-
-                  {productChartData.map((item) => {
-                    const rawHeight = ((item[salesHeader] || 0) / maxSales) * 100;
-                    const barHeight = chartAnimated ? `${Math.max(rawHeight, 8)}%` : "0%";
-
-                    return (
-                      <div className="bar-group" key={item[productHeader]}>
-                        <div className="bar" style={{ height: barHeight }} />
-                        <div className="bar-label-x">{item[productHeader]}</div>
+                  <div className="chart-wrap">
+                    <div className="chart-area">
+                      <div className="y-axis">
+                        {[0, 25, 50, 75, 100].reverse().map((pct, index) => (
+                          <div
+                            key={pct}
+                            className="y-label"
+                            style={{ bottom: `${index * 25}%` }}
+                          >
+                            {formatNumber(Math.round((maxChartValue * pct) / 100))}
+                          </div>
+                        ))}
                       </div>
-                    );
-                  })}
+
+                      <div className="plot">
+                        {[0, 25, 50, 75, 100].map((pct) => (
+                          <div
+                            key={pct}
+                            className="grid-line"
+                            style={{ bottom: `${pct}%` }}
+                          />
+                        ))}
+
+                        {chartData.map((item) => {
+                          const rawHeight = ((item.value || 0) / maxChartValue) * 100;
+                          const barHeight = chartAnimated ? `${Math.max(rawHeight, 8)}%` : "0%";
+
+                          return (
+                            <div className="bar-group" key={item.name}>
+                              <div className="bar" style={{ height: barHeight }} />
+                              <div className="bar-label-x">{item.name}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              <section className="panel table-panel">
+                <div className="table-head">
+                  <h2>Uploaded Data Table</h2>
+
+                  <div className="table-controls">
+                    <input
+                      className="table-search"
+                      type="text"
+                      placeholder="Search in table..."
+                      value={tableSearch}
+                      onChange={(e) => setTableSearch(e.target.value)}
+                    />
+
+                    <select
+                      className="rows-select"
+                      value={rowsPerPage}
+                      onChange={(e) => setRowsPerPage(Number(e.target.value))}
+                    >
+                      <option value={5}>5 rows</option>
+                      <option value={8}>8 rows</option>
+                      <option value={10}>10 rows</option>
+                      <option value={15}>15 rows</option>
+                    </select>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </section>
 
-          <section className="panel table-panel">
-            <div className="table-head">
-              <h2>Uploaded Data Table</h2>
-
-              <div className="table-controls">
-                <input
-                  className="table-search"
-                  type="text"
-                  placeholder="Search in table..."
-                  value={tableSearch}
-                  onChange={(e) => setTableSearch(e.target.value)}
-                />
-
-                <select
-                  className="rows-select"
-                  value={rowsPerPage}
-                  onChange={(e) => setRowsPerPage(Number(e.target.value))}
-                >
-                  <option value={5}>5 rows</option>
-                  <option value={8}>8 rows</option>
-                  <option value={10}>10 rows</option>
-                  <option value={15}>15 rows</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    {headers.map((header) => (
-                      <th key={header}>{header}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {visibleRows.map((row, index) => (
-                    <tr key={index}>
-                      {headers.map((header) => (
-                        <td key={header}>
-                          {typeof row[header] === "number"
-                            ? formatNumber(row[header])
-                            : row[header]}
-                        </td>
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        {headers.map((header) => (
+                          <th key={header}>{header}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {visibleRows.map((row, index) => (
+                        <tr key={index}>
+                          {headers.map((header) => (
+                            <td key={header}>
+                              {typeof row[header] === "number"
+                                ? formatNumber(row[header])
+                                : row[header]}
+                            </td>
+                          ))}
+                        </tr>
                       ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </>
+          )}
         </div>
       </div>
     </>
