@@ -562,24 +562,24 @@ export default function App() {
 
             <form onSubmit={handleLogin}>
               <div className="form-group">
-                <label className="label">Full Name</label>
+                <label className="label">Email Address</label>
                 <input
                   className="input"
                   type="text"
-                  placeholder="Enter your full name"
+                  placeholder="Enter your email address"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
 
               <div className="form-group">
-                <label className="label">Email Address</label>
+                <label className="label">Password </label>
                 <input
                   className="input"
                   type="email"
-                  placeholder="Enter your email address"
+                  placeholder="Enter your password"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
 
