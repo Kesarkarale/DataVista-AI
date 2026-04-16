@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+ import { useEffect, useMemo, useState } from "react";
 
 function parseCSV(text) {
   const lines = text
@@ -44,6 +44,62 @@ function downloadCsv(filename, content) {
   URL.revokeObjectURL(url);
 }
 
+function getInsightText({
+  chartType,
+  topProduct,
+  lowestProduct,
+  averageSales,
+  totalSales,
+  regionData,
+  monthData,
+  productHeader,
+  salesHeader,
+}) {
+  if (chartType === "top") {
+    return `${
+      topProduct?.[productHeader] || "Top product"
+    } is currently the highest performer with sales of ${formatNumber(
+      topProduct?.[salesHeader] || 0
+    )}.`;
+  }
+
+  if (chartType === "lowest") {
+    return `${
+      lowestProduct?.[productHeader] || "Lowest product"
+    } is the lowest performer with sales of ${formatNumber(
+      lowestProduct?.[salesHeader] || 0
+    )}.`;
+  }
+
+  if (chartType === "average") {
+    return `The average sales across all records is ${formatNumber(
+      Number(averageSales.toFixed(2))
+    )}.`;
+  }
+
+  if (chartType === "total") {
+    return `The dataset generated a total sales value of ${formatNumber(totalSales)}.`;
+  }
+
+  if (chartType === "region") {
+    const bestRegion = [...regionData].sort((a, b) => b.value - a.value)[0];
+    if (!bestRegion) return "Region-wise comparison generated successfully.";
+    return `${bestRegion.name} is the best performing region with sales of ${formatNumber(
+      bestRegion.value
+    )}.`;
+  }
+
+  if (chartType === "month") {
+    const bestMonth = [...monthData].sort((a, b) => b.value - a.value)[0];
+    if (!bestMonth) return "Monthly sales trend generated successfully.";
+    return `${bestMonth.name} recorded the highest monthly sales at ${formatNumber(
+      bestMonth.value
+    )}.`;
+  }
+
+  return "Analysis generated successfully.";
+}
+
 export default function App() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [name, setName] = useState("");
@@ -56,6 +112,7 @@ export default function App() {
   const [query, setQuery] = useState("");
   const [activeQuery, setActiveQuery] = useState("");
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const [resultText, setResultText] = useState(
     "Upload your CSV and ask a question to generate smart insights."
@@ -64,6 +121,8 @@ export default function App() {
     "Dashboard loaded successfully. Upload a CSV to unlock live visual analysis."
   );
   const [recentQueries, setRecentQueries] = useState([]);
+  const [chatHistory, setChatHistory] = useState([]);
+
   const [tableSearch, setTableSearch] = useState("");
   const [rowsPerPage, setRowsPerPage] = useState(8);
   const [chartType, setChartType] = useState("top");
@@ -206,29 +265,29 @@ export default function App() {
       return rows;
     }
 
-    if (q.includes("top product")) {
+    if (q.includes("top")) {
       return sortedBySales.slice(0, 5);
     }
 
-    if (q.includes("lowest product")) {
+    if (q.includes("lowest")) {
       return [...sortedBySales].slice(-5).reverse();
     }
 
     if (q.includes("average")) {
       return rows.map((row) => ({
         ...row,
-        [salesHeader]: averageSales,
+        [salesHeader]: Number(averageSales.toFixed(2)),
       }));
     }
 
-    if (q.includes("total sales")) {
+    if (q.includes("total")) {
       return rows.map((row) => ({
         ...row,
         [salesHeader]: totalSales,
       }));
     }
 
-    if (q.includes("region wise sales")) {
+    if (q.includes("region")) {
       return regionData.map((item) => ({
         [productHeader || "Product"]: item.name,
         [regionHeader || "Region"]: item.name,
@@ -237,7 +296,7 @@ export default function App() {
       }));
     }
 
-    if (q.includes("monthly sales")) {
+    if (q.includes("month")) {
       return monthData.map((item) => ({
         [productHeader || "Product"]: "-",
         [regionHeader || "Region"]: "-",
@@ -271,16 +330,28 @@ export default function App() {
     1
   );
 
+  const chartTitle =
+    chartType === "top"
+      ? "Top Product Sales"
+      : chartType === "lowest"
+      ? "Lowest Product Sales"
+      : chartType === "average"
+      ? "Average Sales"
+      : chartType === "total"
+      ? "Total Sales"
+      : chartType === "region"
+      ? "Region Wise Sales Distribution"
+      : "Monthly Sales Trend";
+
   useEffect(() => {
-    if (!chartData.length) {
+    if (!chartData.length || chartType === "region" || chartType === "month") {
       setAnimateChart(false);
       return;
     }
-
     setAnimateChart(false);
     const timer = setTimeout(() => setAnimateChart(true), 120);
     return () => clearTimeout(timer);
-  }, [chartData]);
+  }, [chartData, chartType]);
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -313,8 +384,11 @@ export default function App() {
       setQuery("");
       setActiveQuery("");
       setHasAnalyzed(false);
+      setLoading(false);
+
       setTableSearch("");
       setRecentQueries([]);
+      setChatHistory([]);
       setRowsPerPage(8);
       setChartType("top");
 
@@ -343,73 +417,65 @@ export default function App() {
       return;
     }
 
-    setHasAnalyzed(true);
-    setActiveQuery(q);
-    setTableSearch("");
-    setRecentQueries((prev) => [q, ...prev.filter((item) => item !== q)].slice(0, 5));
+    setLoading(true);
 
-    if (q.includes("top product")) {
-      setChartType("top");
-      setResultText(
-        `Top product is ${topProduct?.[productHeader] || "-"} with sales ${formatNumber(
+    setTimeout(() => {
+      let nextChartType = "top";
+      let response = "Query analyzed successfully.";
+
+      if (q.includes("top")) {
+        nextChartType = "top";
+        response = `Top product is ${topProduct?.[productHeader] || "-"} with sales ${formatNumber(
           topProduct?.[salesHeader] || 0
-        )}`
-      );
-      setInsightText(
-        `${topProduct?.[productHeader] || "Top product"} generated the highest sales in your dataset.`
-      );
-      return;
-    }
+        )}`;
+      } else if (q.includes("lowest")) {
+        nextChartType = "lowest";
+        response = `Lowest product is ${
+          lowestProduct?.[productHeader] || "-"
+        } with sales ${formatNumber(lowestProduct?.[salesHeader] || 0)}`;
+      } else if (q.includes("average")) {
+        nextChartType = "average";
+        response = `Average sales is ${formatNumber(Number(averageSales.toFixed(2)))}`;
+      } else if (q.includes("total")) {
+        nextChartType = "total";
+        response = `Total sales is ${formatNumber(totalSales)}`;
+      } else if (q.includes("region")) {
+        nextChartType = "region";
+        response = "Showing region wise sales distribution.";
+      } else if (q.includes("month")) {
+        nextChartType = "month";
+        response = "Showing monthly sales trend.";
+      }
 
-    if (q.includes("lowest product")) {
-      setChartType("lowest");
-      setResultText(
-        `Lowest product is ${lowestProduct?.[productHeader] || "-"} with sales ${formatNumber(
-          lowestProduct?.[salesHeader] || 0
-        )}`
-      );
-      setInsightText(
-        `${lowestProduct?.[productHeader] || "Lowest product"} has the lowest sales in the dataset.`
-      );
-      return;
-    }
+      const autoInsight = getInsightText({
+        chartType: nextChartType,
+        topProduct,
+        lowestProduct,
+        averageSales,
+        totalSales,
+        regionData,
+        monthData,
+        productHeader,
+        salesHeader,
+      });
 
-    if (q.includes("average")) {
-      setChartType("average");
-      setResultText(`Average sales is ${formatNumber(Number(averageSales.toFixed(2)))}`);
-      setInsightText("Average sales has been calculated successfully across all records.");
-      return;
-    }
+      setChartType(nextChartType);
+      setHasAnalyzed(true);
+      setActiveQuery(q);
+      setTableSearch("");
 
-    if (q.includes("total sales")) {
-      setChartType("total");
-      setResultText(`Total sales is ${formatNumber(totalSales)}`);
-      setInsightText(
-        `Overall sales across all uploaded records equal ${formatNumber(totalSales)}.`
-      );
-      return;
-    }
+      setResultText(response);
+      setInsightText(autoInsight);
 
-    if (q.includes("region wise sales")) {
-      setChartType("region");
-      const summary = regionData
-        .map((item) => `${item.name}: ${formatNumber(item.value)}`)
-        .join(", ");
-      setResultText(`Region wise sales: ${summary}`);
-      setInsightText("Regional comparison generated successfully.");
-      return;
-    }
+      setRecentQueries((prev) => [q, ...prev.filter((item) => item !== q)].slice(0, 5));
+      setChatHistory((prev) => [
+        ...prev,
+        { type: "user", text: q },
+        { type: "bot", text: response },
+      ]);
 
-    if (q.includes("monthly sales")) {
-      setChartType("month");
-      setResultText("Monthly sales trend is now shown in the chart.");
-      setInsightText("Month-wise sales analysis generated successfully.");
-      return;
-    }
-
-    setChartType("top");
-    setResultText("Query analyzed successfully.");
-    setInsightText("Review the updated table, summary cards, and chart.");
+      setLoading(false);
+    }, 900);
   };
 
   const handleQuickQuery = (text) => {
@@ -424,28 +490,17 @@ export default function App() {
     setQuery("");
     setActiveQuery("");
     setHasAnalyzed(false);
+    setLoading(false);
 
     setTableSearch("");
     setRecentQueries([]);
+    setChatHistory([]);
     setRowsPerPage(8);
     setChartType("top");
 
     setResultText("Upload your CSV and ask a question to generate smart insights.");
     setInsightText("Dashboard loaded successfully. Upload a CSV to unlock live visual analysis.");
   };
-
-  const chartTitle =
-    chartType === "top"
-      ? "Top Product Sales"
-      : chartType === "lowest"
-      ? "Lowest Product Sales"
-      : chartType === "average"
-      ? "Average Sales"
-      : chartType === "total"
-      ? "Total Sales"
-      : chartType === "region"
-      ? "Region Wise Sales"
-      : "Monthly Sales Trend";
 
   const tableHeaders = useMemo(() => {
     if (headers.length) return headers;
@@ -573,7 +628,7 @@ export default function App() {
               </div>
 
               <div className="form-group">
-                <label className="label">Password </label>
+                <label className="label">Password</label>
                 <input
                   className="input"
                   type="email"
@@ -744,7 +799,7 @@ export default function App() {
           color: #d8defe;
           line-height: 1.5;
           padding-top: 10px;
-          max-width: 320px;
+          max-width: 340px;
           margin: 0 auto;
         }
 
@@ -1034,10 +1089,85 @@ export default function App() {
           margin-top: 10px;
         }
 
+        .loading-box {
+          max-width: 1060px;
+          margin: 0 auto 16px;
+          border-radius: 18px;
+          padding: 14px 18px;
+          text-align: center;
+          color: #dbeafe;
+          background: rgba(99, 102, 241, 0.18);
+          border: 1px solid rgba(129, 140, 248, 0.35);
+          font-weight: 700;
+          letter-spacing: .4px;
+        }
+
+        .typing {
+          display: inline-flex;
+          gap: 6px;
+          margin-left: 10px;
+          vertical-align: middle;
+        }
+
+        .typing span {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #c7d2fe;
+          animation: bounce 1s infinite;
+        }
+
+        .typing span:nth-child(2) { animation-delay: .15s; }
+        .typing span:nth-child(3) { animation-delay: .3s; }
+
+        .chat-box {
+          max-width: 1060px;
+          margin: 0 auto 18px;
+          padding: 12px;
+          border-radius: 22px;
+          background: rgba(255,255,255,.03);
+          border: 1px solid rgba(255,255,255,.06);
+        }
+
+        .chat-msg {
+          display: flex;
+          margin-bottom: 12px;
+        }
+
+        .chat-msg.user {
+          justify-content: flex-end;
+        }
+
+        .chat-msg.bot {
+          justify-content: flex-start;
+        }
+
+        .chat-bubble {
+          max-width: 78%;
+          padding: 12px 16px;
+          border-radius: 18px;
+          line-height: 1.5;
+          font-size: 15px;
+          word-break: break-word;
+        }
+
+        .chat-msg.user .chat-bubble {
+          background: linear-gradient(135deg, #6366f1, #7c3aed);
+          color: white;
+          border-bottom-right-radius: 6px;
+        }
+
+        .chat-msg.bot .chat-bubble {
+          background: rgba(255,255,255,.08);
+          color: #e5e7eb;
+          border: 1px solid rgba(255,255,255,.08);
+          border-bottom-left-radius: 6px;
+        }
+
         .chart-wrap {
           margin-top: 8px;
-          height: 480px;
-          padding: 12px 18px 10px;
+          min-height: 420px;
+          padding: 18px;
           position: relative;
           overflow: hidden;
         }
@@ -1124,6 +1254,131 @@ export default function App() {
           text-align: center;
         }
 
+        .line-chart-box {
+          height: 340px;
+          display: flex;
+          align-items: flex-end;
+          gap: 14px;
+          padding: 24px 0 10px;
+          position: relative;
+        }
+
+        .line-col {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: flex-end;
+          height: 100%;
+        }
+
+        .line-point-wrap {
+          display: flex;
+          align-items: flex-end;
+          justify-content: center;
+          width: 100%;
+          flex: 1;
+        }
+
+        .line-stick {
+          width: 8px;
+          border-radius: 999px;
+          background: linear-gradient(180deg, #60a5fa, #8b5cf6);
+          box-shadow: 0 8px 18px rgba(96,165,250,.25);
+          transition: height .9s ease;
+        }
+
+        .line-value {
+          font-size: 12px;
+          color: #cbd5e1;
+          margin-bottom: 8px;
+          text-align: center;
+        }
+
+        .line-label {
+          margin-top: 10px;
+          color: #d5daf7;
+          font-size: 14px;
+          text-align: center;
+        }
+
+        .pie-wrap {
+          display: grid;
+          grid-template-columns: 280px 1fr;
+          gap: 24px;
+          align-items: center;
+          min-height: 320px;
+        }
+
+        .pie-main {
+          width: 240px;
+          height: 240px;
+          margin: 0 auto;
+          border-radius: 50%;
+          border: 12px solid rgba(255,255,255,.08);
+          box-shadow: inset 0 0 0 18px rgba(10,16,34,.9);
+          position: relative;
+          overflow: hidden;
+        }
+
+        .pie-hole {
+          position: absolute;
+          inset: 58px;
+          background: linear-gradient(180deg, #0b1940, #081435);
+          border-radius: 50%;
+          border: 1px solid rgba(255,255,255,.08);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          color: #e5e7eb;
+          font-weight: 800;
+          padding: 16px;
+          font-size: 14px;
+          z-index: 2;
+        }
+
+        .pie-segment {
+          position: absolute;
+          inset: 0;
+          border-radius: 50%;
+        }
+
+        .pie-legend {
+          display: grid;
+          gap: 12px;
+        }
+
+        .pie-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 14px;
+          padding: 12px 14px;
+          border-radius: 16px;
+          background: rgba(255,255,255,.04);
+          border: 1px solid rgba(255,255,255,.06);
+        }
+
+        .pie-left {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          color: #e5e7eb;
+        }
+
+        .pie-color {
+          width: 14px;
+          height: 14px;
+          border-radius: 4px;
+        }
+
+        .pie-right {
+          color: #c7d2fe;
+          font-weight: 700;
+          text-align: right;
+        }
+
         .table-head {
           display: flex;
           justify-content: space-between;
@@ -1191,17 +1446,23 @@ export default function App() {
           to { opacity: 1; transform: translateY(0); }
         }
 
+        @keyframes bounce {
+          0%, 80%, 100% { transform: translateY(0); opacity: .7; }
+          40% { transform: translateY(-6px); opacity: 1; }
+        }
+
         @media (max-width: 1200px) {
           .hero-title h1 { font-size: 44px; }
           .stats-grid { grid-template-columns: repeat(3, 1fr); }
         }
 
-        @media (max-width: 900px) {
-          .hero-grid, .dual-grid, .query-row { grid-template-columns: 1fr; }
+        @media (max-width: 950px) {
+          .hero-grid, .dual-grid, .query-row, .pie-wrap { grid-template-columns: 1fr; }
           .stats-grid { grid-template-columns: repeat(2, 1fr); }
           .hero, .summary, .ask-panel, .chart-panel, .table-panel { padding: 24px 18px; }
           .hero-title h1 { font-size: 34px; }
-          .chart-wrap { height: 420px; }
+          .pie-main { width: 220px; height: 220px; }
+          .pie-hole { inset: 52px; }
         }
 
         @media (max-width: 640px) {
@@ -1211,7 +1472,8 @@ export default function App() {
           .section-title, .ask-title, .table-head h2 { font-size: 24px; }
           .plot { gap: 12px; }
           .bar-group { min-width: 56px; }
-          .chart-wrap { height: 360px; }
+          .chart-wrap { min-height: 340px; }
+          .chat-bubble { max-width: 92%; }
         }
       `}</style>
 
@@ -1222,7 +1484,7 @@ export default function App() {
               <div className="hero-left">
                 <div className="logo">✦</div>
                 <div className="hero-title">
-                  <h1>AI Data Analyst Dashboard</h1>
+                  <h1>DataVista AI Dashboard</h1>
                   <p>Upload data, ask questions, and get instant charts, insights, and summaries.</p>
                 </div>
               </div>
@@ -1248,9 +1510,9 @@ export default function App() {
               <div className="how-card">
                 <h3>How it works</h3>
                 <ul className="how-list">
-                  <li>1. Upload file</li>
-                  <li>2. Type query</li>
-                  <li>3. Click Analyze</li>
+                  <li>1. Upload your CSV file</li>
+                  <li>2. Enter a natural language query</li>
+                  <li>3. Click Analyze to generate insights</li>
                 </ul>
               </div>
             </div>
@@ -1318,18 +1580,24 @@ export default function App() {
                 <div className="mini-panel">
                   <h3>Highlights</h3>
                   <ul>
-                    <li>Top selling product: <strong>{topProduct?.[productHeader] || "-"}</strong></li>
-                    <li>Highest sales value: <strong>{formatNumber(topProduct?.[salesHeader] || 0)}</strong></li>
-                    <li>Average sales: <strong>{formatNumber(Number(averageSales.toFixed(2)))}</strong></li>
+                    <li>
+                      Top selling product: <strong>{topProduct?.[productHeader] || "-"}</strong>
+                    </li>
+                    <li>
+                      Highest sales value: <strong>{formatNumber(topProduct?.[salesHeader] || 0)}</strong>
+                    </li>
+                    <li>
+                      Average sales: <strong>{formatNumber(Number(averageSales.toFixed(2)))}</strong>
+                    </li>
                   </ul>
                 </div>
 
                 <div className="mini-panel">
-                  <h3>Data Health</h3>
+                  <h3>Project Strength</h3>
                   <ul>
-                    <li>Dataset parsed successfully and ready for analysis.</li>
-                    <li>Chart will appear only after Analyze is clicked.</li>
-                    <li>Table supports both query-based updates and manual search.</li>
+                    <li>CSV upload and intelligent dashboard flow.</li>
+                    <li>Query-based chart and table updates.</li>
+                    <li>Chat-style analysis output with smart insights.</li>
                   </ul>
                 </div>
               </div>
@@ -1350,26 +1618,26 @@ export default function App() {
               <button
                 className="btn analyze-btn"
                 onClick={() => runAnalysis()}
-                disabled={!hasUploaded || !query.trim()}
+                disabled={!hasUploaded || !query.trim() || loading}
               >
-                Analyze
+                {loading ? "Analyzing..." : "Analyze"}
               </button>
             </div>
 
             <div className="chip-row">
               {[
                 "top product",
-                "average",
-                "total sales",
-                "monthly sales",
-                "region wise sales",
                 "lowest product",
+                "average sales",
+                "total sales",
+                "region wise sales",
+                "monthly sales",
               ].map((chip) => (
                 <button
                   key={chip}
                   className="chip"
                   onClick={() => handleQuickQuery(chip)}
-                  disabled={!hasUploaded}
+                  disabled={!hasUploaded || loading}
                   style={{
                     opacity: hasUploaded ? 1 : 0.5,
                     cursor: hasUploaded ? "pointer" : "not-allowed",
@@ -1381,8 +1649,20 @@ export default function App() {
             </div>
 
             <div className="info-box">
-              Suggested insights: compare region performance, find top products, view monthly trend, or check total and average sales.
+              Suggested queries: top product, lowest product, total sales, average sales,
+              region wise sales, monthly sales trend.
             </div>
+
+            {loading && (
+              <div className="loading-box">
+                Analyzing data
+                <span className="typing">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </span>
+              </div>
+            )}
 
             <div className="query-result">
               {hasAnalyzed
@@ -1392,6 +1672,22 @@ export default function App() {
 
             <div className="success-box">
               <strong>Insight:</strong> {insightText}
+            </div>
+
+            <div className="chat-box">
+              {chatHistory.length ? (
+                chatHistory.map((msg, index) => (
+                  <div key={index} className={`chat-msg ${msg.type}`}>
+                    <div className="chat-bubble">{msg.text}</div>
+                  </div>
+                ))
+              ) : (
+                <div className="chat-msg bot">
+                  <div className="chat-bubble">
+                    Upload a CSV, ask a query, and I will generate a chart, smart summary, and table insights.
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="recent-box">
@@ -1424,41 +1720,141 @@ export default function App() {
               </div>
 
               <div className="chart-wrap">
-                <div className="chart-area">
-                  <div className="y-axis">
-                    {[0, 25, 50, 75, 100].map((pct) => (
-                      <div
-                        key={pct}
-                        className="y-label"
-                        style={{ bottom: `${pct}%` }}
-                      >
-                        {formatNumber(Math.round((maxChartValue * pct) / 100))}
-                      </div>
-                    ))}
+                {chartType !== "region" && chartType !== "month" && (
+                  <div className="chart-area">
+                    <div className="y-axis">
+                      {[0, 25, 50, 75, 100].map((pct) => (
+                        <div
+                          key={pct}
+                          className="y-label"
+                          style={{ bottom: `${pct}%` }}
+                        >
+                          {formatNumber(Math.round((maxChartValue * pct) / 100))}
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="plot">
+                      {[0, 25, 50, 75, 100].map((pct) => (
+                        <div
+                          key={pct}
+                          className="grid-line"
+                          style={{ bottom: `${pct}%` }}
+                        />
+                      ))}
+
+                      {chartData.map((item, index) => {
+                        const rawHeight = ((item.value || 0) / maxChartValue) * 100;
+                        const barHeight = animateChart ? `${Math.max(rawHeight, 8)}%` : "0%";
+
+                        return (
+                          <div className="bar-group" key={`${item.name}-${index}`}>
+                            <div className="bar" style={{ height: barHeight }} />
+                            <div className="bar-label-x">{item.name}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
+                )}
 
-                  <div className="plot">
-                    {[0, 25, 50, 75, 100].map((pct) => (
-                      <div
-                        key={pct}
-                        className="grid-line"
-                        style={{ bottom: `${pct}%` }}
-                      />
-                    ))}
-
+                {chartType === "month" && (
+                  <div className="line-chart-box">
                     {chartData.map((item, index) => {
                       const rawHeight = ((item.value || 0) / maxChartValue) * 100;
-                      const barHeight = animateChart ? `${Math.max(rawHeight, 8)}%` : "0%";
-
                       return (
-                        <div className="bar-group" key={`${item.name}-${index}`}>
-                          <div className="bar" style={{ height: barHeight }} />
-                          <div className="bar-label-x">{item.name}</div>
+                        <div className="line-col" key={`${item.name}-${index}`}>
+                          <div className="line-value">{formatNumber(item.value)}</div>
+                          <div className="line-point-wrap">
+                            <div
+                              className="line-stick"
+                              style={{ height: `${Math.max(rawHeight * 2.4, 12)}px` }}
+                            />
+                          </div>
+                          <div className="line-label">{item.name}</div>
                         </div>
                       );
                     })}
                   </div>
-                </div>
+                )}
+
+                {chartType === "region" && (
+                  <div className="pie-wrap">
+                    <div className="pie-main">
+                      {(() => {
+                        const colors = [
+                          "#6366f1",
+                          "#8b5cf6",
+                          "#ec4899",
+                          "#06b6d4",
+                          "#22c55e",
+                          "#f59e0b",
+                        ];
+
+                        let start = 0;
+                        return (
+                          <>
+                            {chartData.map((item, index) => {
+                              const percent = totalSales
+                                ? (item.value / totalSales) * 100
+                                : 0;
+                              const end = start + percent;
+                              const segment = (
+                                <div
+                                  key={item.name}
+                                  className="pie-segment"
+                                  style={{
+                                    background: `conic-gradient(transparent ${start}%, ${colors[index % colors.length]} ${start}%, ${colors[index % colors.length]} ${end}%, transparent ${end}%)`,
+                                  }}
+                                />
+                              );
+                              start = end;
+                              return segment;
+                            })}
+                            <div className="pie-hole">
+                              Region
+                              <br />
+                              Analysis
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+
+                    <div className="pie-legend">
+                      {chartData.map((item, index) => {
+                        const colors = [
+                          "#6366f1",
+                          "#8b5cf6",
+                          "#ec4899",
+                          "#06b6d4",
+                          "#22c55e",
+                          "#f59e0b",
+                        ];
+                        const percentage = totalSales
+                          ? ((item.value / totalSales) * 100).toFixed(1)
+                          : 0;
+
+                        return (
+                          <div className="pie-item" key={item.name}>
+                            <div className="pie-left">
+                              <span
+                                className="pie-color"
+                                style={{ background: colors[index % colors.length] }}
+                              ></span>
+                              <span>{item.name}</span>
+                            </div>
+                            <div className="pie-right">
+                              {formatNumber(item.value)}
+                              <br />
+                              {percentage}%
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </section>
           )}
