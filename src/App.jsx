@@ -1,4 +1,4 @@
- import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 function parseCSV(text) {
   const lines = text
@@ -102,8 +102,20 @@ function getInsightText({
 
 export default function App() {
   const [loggedIn, setLoggedIn] = useState(false);
+  const [isSignup, setIsSignup] = useState(false);
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const [users, setUsers] = useState(() => {
+    try {
+      const saved = localStorage.getItem("datavista_users");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
   const [csvText, setCsvText] = useState("");
   const [fileName, setFileName] = useState("");
@@ -353,19 +365,68 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [chartData, chartType]);
 
-  const handleLogin = (e) => {
+  const handleSignup = (e) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim()) {
-      alert("Please enter name and email.");
+
+    const cleanName = name.trim();
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPassword = password.trim();
+
+    if (!cleanName || !cleanEmail || !cleanPassword) {
+      alert("Please fill all fields.");
       return;
     }
+
+    const exists = users.find((u) => u.email === cleanEmail);
+    if (exists) {
+      alert("Account already exists with this email.");
+      return;
+    }
+
+    const newUser = {
+      name: cleanName,
+      email: cleanEmail,
+      password: cleanPassword,
+    };
+
+    const updatedUsers = [...users, newUser];
+    setUsers(updatedUsers);
+    localStorage.setItem("datavista_users", JSON.stringify(updatedUsers));
+
+    alert("Account created successfully. Please login.");
+    setIsSignup(false);
+    setPassword("");
+  };
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPassword = password.trim();
+
+    if (!cleanEmail || !cleanPassword) {
+      alert("Please enter email and password.");
+      return;
+    }
+
+    const user = users.find(
+      (u) => u.email === cleanEmail && u.password === cleanPassword
+    );
+
+    if (!user) {
+      alert("Invalid email or password.");
+      return;
+    }
+
+    setName(user.name || "");
     setLoggedIn(true);
+    setPassword("");
   };
 
   const handleLogout = () => {
     setLoggedIn(false);
-    setName("");
     setEmail("");
+    setPassword("");
   };
 
   const handleUpload = (event) => {
@@ -520,14 +581,14 @@ export default function App() {
               linear-gradient(180deg, #0a1022 0%, #09152e 100%);
             color: white;
           }
-          .login-page {
+          .auth-page {
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 24px;
           }
-          .login-card {
+          .auth-card {
             width: 100%;
             max-width: 470px;
             background: linear-gradient(180deg, rgba(11, 25, 64, 0.96), rgba(8, 20, 53, 0.96));
@@ -537,7 +598,7 @@ export default function App() {
             box-shadow: 0 16px 42px rgba(0, 0, 0, 0.28);
             animation: fadeIn .8s ease;
           }
-          .login-logo {
+          .auth-logo {
             width: 74px;
             height: 74px;
             border-radius: 22px;
@@ -549,13 +610,13 @@ export default function App() {
             background: linear-gradient(135deg, #7c4dff, #ff4da6);
             box-shadow: 0 12px 30px rgba(124, 77, 255, 0.35);
           }
-          .login-title {
+          .auth-title {
             text-align: center;
-            font-size: 40px;
+            font-size: 38px;
             font-weight: 800;
             margin-bottom: 8px;
           }
-          .login-subtitle {
+          .auth-subtitle {
             text-align: center;
             color: #c7d2fe;
             line-height: 1.6;
@@ -586,7 +647,7 @@ export default function App() {
             border-color: rgba(129, 140, 248, 0.7);
             box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
           }
-          .login-btn {
+          .auth-btn {
             width: 100%;
             height: 56px;
             border: none;
@@ -599,30 +660,56 @@ export default function App() {
             transition: 0.25s ease;
             margin-top: 8px;
           }
-          .login-btn:hover { transform: translateY(-2px); }
+          .auth-btn:hover { transform: translateY(-2px); }
+          .switch-auth {
+            margin-top: 18px;
+            text-align: center;
+            color: #c7d2fe;
+            font-size: 14px;
+          }
+          .switch-link {
+            color: #a78bfa;
+            font-weight: 700;
+            cursor: pointer;
+            margin-left: 6px;
+          }
           @keyframes fadeIn {
             from { opacity: 0; transform: translateY(12px); }
             to { opacity: 1; transform: translateY(0); }
           }
         `}</style>
 
-        <div className="login-page">
-          <div className="login-card">
-            <div className="login-logo">✦</div>
-            <div className="login-title">DataVista AI</div>
-            <div className="login-subtitle">
-              Login to access your professional AI data analysis dashboard with
-              CSV upload, insights, chart visualization, and smart table search.
+        <div className="auth-page">
+          <div className="auth-card">
+            <div className="auth-logo">✦</div>
+            <div className="auth-title">{isSignup ? "Create Account" : "Login"}</div>
+            <div className="auth-subtitle">
+              {isSignup
+                ? "Create your account to access the professional AI data analysis dashboard."
+                : "Login with your email and password to access the AI data dashboard."}
             </div>
 
-            <form onSubmit={handleLogin}>
+            <form onSubmit={isSignup ? handleSignup : handleLogin}>
+              {isSignup && (
+                <div className="form-group">
+                  <label className="label">Full Name</label>
+                  <input
+                    className="input"
+                    type="text"
+                    placeholder="Enter your full name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                </div>
+              )}
+
               <div className="form-group">
                 <label className="label">Email Address</label>
                 <input
                   className="input"
-                  type="text"
+                  type="email"
                   placeholder="Enter your email address"
-                  value={name}
+                  value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
@@ -631,17 +718,30 @@ export default function App() {
                 <label className="label">Password</label>
                 <input
                   className="input"
-                  type="email"
+                  type="password"
                   placeholder="Enter your password"
-                  value={email}
+                  value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
 
-              <button type="submit" className="login-btn">
-                Login to Dashboard
+              <button type="submit" className="auth-btn">
+                {isSignup ? "Create New Account" : "Login"}
               </button>
             </form>
+
+            <div className="switch-auth">
+              {isSignup ? "Already have an account?" : "Don't have an account?"}
+              <span
+                className="switch-link"
+                onClick={() => {
+                  setIsSignup(!isSignup);
+                  setPassword("");
+                }}
+              >
+                {isSignup ? "Login" : "Sign Up"}
+              </span>
+            </div>
           </div>
         </div>
       </>
@@ -1484,8 +1584,10 @@ export default function App() {
               <div className="hero-left">
                 <div className="logo">✦</div>
                 <div className="hero-title">
-                  <h1>DataVista AI Dashboard</h1>
-                  <p>Upload data, ask questions, and get instant charts, insights, and summaries.</p>
+                  <h1>AI Data Analyst Dashboard</h1>
+                  <p>
+                    Welcome{name ? `, ${name}` : ""}! Upload data, ask questions, and get instant charts, insights, and summaries.
+                  </p>
                 </div>
               </div>
 
