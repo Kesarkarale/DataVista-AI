@@ -1206,13 +1206,13 @@ export default function App() {
         .typing span:nth-child(2) { animation-delay: .15s; }
         .typing span:nth-child(3) { animation-delay: .3s; }
 
-        .chart-wrap {
-          margin-top: 6px;
-          height: 320px;
-          padding: 10px 8px 0;
+         .chart-wrap {
+          margin-top: 10px;
+          height: 420px;
+          padding: 16px 18px 10px;
           position: relative;
-          overflow: hidden;
-        }
+          overflow: visible;
+          }
 
         .legend {
           display: flex;
@@ -1252,23 +1252,25 @@ export default function App() {
           font-size: 13px;
         }
 
-        .plot {
-          flex: 1;
-          position: relative;
-          padding: 10px 0 28px;
-          border-left: 1px solid rgba(255,255,255,.08);
-          border-bottom: 1px solid rgba(255,255,255,.08);
-          display: flex;
-          align-items: flex-end;
-          gap: 18px;
+       .plot {
+        flex: 1;
+        position: relative;
+        height: 100%;
+        padding: 24px 0 50px;
+        border-left: 1px solid rgba(255,255,255,.08);
+        border-bottom: 1px solid rgba(255,255,255,.08);
+        display: flex;
+        align-items: flex-end;
+        gap: 22px;
         }
 
-        .grid-line {
+         .grid-line {
           position: absolute;
           left: 0;
           right: 0;
           border-top: 1px solid rgba(255,255,255,.06);
-        }
+          z-index: 0;
+          }
 
         .bar-group {
           flex: 1;
@@ -1281,13 +1283,15 @@ export default function App() {
           height: 100%;
         }
 
-        .bar {
+         .bar {
           width: 100%;
           border-radius: 16px 16px 0 0;
           background: linear-gradient(180deg, #7068f3, #5b61e8);
           box-shadow: 0 14px 30px rgba(92,97,232,.25);
           transition: height 1s cubic-bezier(.2,.8,.2,1);
-        }
+          position: relative;
+          z-index: 2;
+          }
 
         .bar-label-x {
           margin-top: 10px;
@@ -1528,7 +1532,7 @@ export default function App() {
               <div className="hero-left">
                 <div className="logo">✦</div>
                 <div className="hero-title">
-                  <h1>AI Data Analyst Dashboard</h1>
+                  <h1>DataVista AI Dashboard</h1>
                   <p>
                     Welcome{name ? `, ${name}` : ""}! Upload data, ask questions, and get instant charts, insights, and summaries.
                   </p>
@@ -1766,7 +1770,7 @@ export default function App() {
 
                       {chartData.map((item, index) => {
                         const rawHeight = ((item.value || 0) / maxChartValue) * 100;
-                        const barHeight = animateChart ? `${Math.max(rawHeight, 8)}%` : "0%";
+                       const barHeight = animateChart ? `${Math.max(rawHeight, 12)}%` : "12%";
 
                         return (
                           <div className="bar-group" key={`${item.name}-${index}`}>
