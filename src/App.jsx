@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+ import { useEffect, useMemo, useState } from "react";
 
 const defaultCsv = `Product,Region,Month,Sales
 Laptop,West,Jan,20000
@@ -25,11 +25,13 @@ function parseCSV(text) {
   const rows = lines.slice(1).map((line) => {
     const values = line.split(",").map((v) => v.trim());
     const row = {};
+
     headers.forEach((header, index) => {
       const raw = values[index] ?? "";
       const num = Number(raw);
       row[header] = raw !== "" && !Number.isNaN(num) ? num : raw;
     });
+
     return row;
   });
 
@@ -135,20 +137,8 @@ export default function App() {
     }));
   }, [rows, monthHeader, salesHeader]);
 
-  const filteredRows = useMemo(() => {
-    if (!tableSearch.trim()) return rows;
-    const q = tableSearch.toLowerCase();
-    return rows.filter((row) =>
-      headers.some((header) =>
-        String(row[header] ?? "").toLowerCase().includes(q)
-      )
-    );
-  }, [rows, headers, tableSearch]);
-
-  const visibleRows = filteredRows.slice(0, rowsPerPage);
-
   const chartData = useMemo(() => {
-    if (!hasUploaded || !rows.length) return [];
+    if (!hasUploaded || !rows.length || !productHeader || !salesHeader) return [];
 
     if (chartType === "top") {
       return sortedBySales.slice(0, 5).map((item) => ({
@@ -158,10 +148,13 @@ export default function App() {
     }
 
     if (chartType === "lowest") {
-      return [...sortedBySales].slice(-5).map((item) => ({
-        name: String(item[productHeader]),
-        value: item[salesHeader],
-      }));
+      return [...sortedBySales]
+        .slice(-5)
+        .reverse()
+        .map((item) => ({
+          name: String(item[productHeader]),
+          value: item[salesHeader],
+        }));
     }
 
     if (chartType === "average") {
@@ -199,6 +192,79 @@ export default function App() {
     regionData,
     monthData,
   ]);
+
+  const filteredRows = useMemo(() => {
+    if (!rows.length) return [];
+
+    const q = query.trim().toLowerCase();
+    const ts = tableSearch.trim().toLowerCase();
+
+    if (ts) {
+      return rows.filter((row) =>
+        headers.some((header) =>
+          String(row[header] ?? "").toLowerCase().includes(ts)
+        )
+      );
+    }
+
+    if (q.includes("top product")) {
+      return sortedBySales.slice(0, 5);
+    }
+
+    if (q.includes("lowest product")) {
+      return [...sortedBySales].slice(-5).reverse();
+    }
+
+    if (q.includes("average")) {
+      return rows.map((row) => ({
+        ...row,
+        [salesHeader]: averageSales,
+      }));
+    }
+
+    if (q.includes("total sales")) {
+      return rows.map((row) => ({
+        ...row,
+        [salesHeader]: totalSales,
+      }));
+    }
+
+    if (q.includes("region wise sales")) {
+      return regionData.map((item) => ({
+        [productHeader || "Category"]: item.name,
+        [regionHeader || "Region"]: item.name,
+        [monthHeader || "Month"]: "-",
+        [salesHeader || "Sales"]: item.value,
+      }));
+    }
+
+    if (q.includes("monthly sales")) {
+      return monthData.map((item) => ({
+        [productHeader || "Product"]: "-",
+        [regionHeader || "Region"]: "-",
+        [monthHeader || "Month"]: item.name,
+        [salesHeader || "Sales"]: item.value,
+      }));
+    }
+
+    return rows;
+  }, [
+    rows,
+    headers,
+    query,
+    tableSearch,
+    sortedBySales,
+    averageSales,
+    totalSales,
+    salesHeader,
+    regionData,
+    monthData,
+    productHeader,
+    regionHeader,
+    monthHeader,
+  ]);
+
+  const visibleRows = filteredRows.slice(0, rowsPerPage);
 
   const maxChartValue = Math.max(
     ...chartData.map((item) => (typeof item.value === "number" ? item.value : 0)),
@@ -246,6 +312,7 @@ export default function App() {
       setQuery("");
       setTableSearch("");
       setRecentQueries([]);
+      setRowsPerPage(8);
       setResultText("Dataset uploaded successfully.");
       setInsightText(
         `Dataset ready. ${parsed.rows.length} rows loaded successfully. You can now explore top products, regional sales, monthly trends, and averages.`
@@ -270,11 +337,14 @@ export default function App() {
     }
 
     setRecentQueries((prev) => [q, ...prev.filter((item) => item !== q)].slice(0, 5));
+    setTableSearch("");
 
     if (q.includes("top product")) {
       setChartType("top");
       setResultText(
-        `Top product is ${topProduct?.[productHeader] || "-"} with sales ${topProduct?.[salesHeader] || 0}`
+        `Top product is ${topProduct?.[productHeader] || "-"} with sales ${formatNumber(
+          topProduct?.[salesHeader] || 0
+        )}`
       );
       setInsightText(
         `${topProduct?.[productHeader] || "Top product"} generated the highest sales in your dataset.`
@@ -285,7 +355,9 @@ export default function App() {
     if (q.includes("lowest product")) {
       setChartType("lowest");
       setResultText(
-        `Lowest product is ${lowestProduct?.[productHeader] || "-"} with sales ${lowestProduct?.[salesHeader] || 0}`
+        `Lowest product is ${lowestProduct?.[productHeader] || "-"} with sales ${formatNumber(
+          lowestProduct?.[salesHeader] || 0
+        )}`
       );
       setInsightText(
         `${lowestProduct?.[productHeader] || "Lowest product"} has the lowest sales in the dataset.`
@@ -295,21 +367,21 @@ export default function App() {
 
     if (q.includes("average")) {
       setChartType("average");
-      setResultText(`Average sales is ${averageSales.toFixed(2)}`);
+      setResultText(`Average sales is ${formatNumber(Number(averageSales.toFixed(2)))}`);
       setInsightText(`Average sales has been calculated successfully across all records.`);
       return;
     }
 
     if (q.includes("total sales")) {
       setChartType("total");
-      setResultText(`Total sales is ${totalSales}`);
-      setInsightText(`Overall sales across all uploaded records equal ${totalSales}.`);
+      setResultText(`Total sales is ${formatNumber(totalSales)}`);
+      setInsightText(`Overall sales across all uploaded records equal ${formatNumber(totalSales)}.`);
       return;
     }
 
     if (q.includes("region wise sales")) {
       setChartType("region");
-      const summary = regionData.map((item) => `${item.name}: ${item.value}`).join(", ");
+      const summary = regionData.map((item) => `${item.name}: ${formatNumber(item.value)}`).join(", ");
       setResultText(`Region wise sales: ${summary}`);
       setInsightText(`Regional comparison generated successfully.`);
       return;
@@ -338,6 +410,7 @@ export default function App() {
     setQuery("");
     setTableSearch("");
     setRecentQueries([]);
+    setRowsPerPage(8);
     setChartType("top");
     setResultText("Use the sample data or upload your own CSV to start analysis.");
     setInsightText("Dashboard is ready. Upload your CSV to unlock live visual analysis.");
@@ -355,6 +428,11 @@ export default function App() {
       : chartType === "region"
       ? "Region Wise Sales"
       : "Monthly Sales Trend";
+
+  const tableHeaders = useMemo(() => {
+    if (headers.length) return headers;
+    return ["Column 1"];
+  }, [headers]);
 
   if (!loggedIn) {
     return (
@@ -1202,8 +1280,8 @@ export default function App() {
                 <h3>Highlights</h3>
                 <ul>
                   <li>Top selling product: <strong>{topProduct?.[productHeader] || "-"}</strong></li>
-                  <li>Highest sales value: <strong>{topProduct?.[salesHeader] || 0}</strong></li>
-                  <li>Average sales: <strong>{averageSales.toFixed(2)}</strong></li>
+                  <li>Highest sales value: <strong>{formatNumber(topProduct?.[salesHeader] || 0)}</strong></li>
+                  <li>Average sales: <strong>{formatNumber(Number(averageSales.toFixed(2)))}</strong></li>
                 </ul>
               </div>
 
@@ -1309,12 +1387,12 @@ export default function App() {
                       />
                     ))}
 
-                    {chartData.map((item) => {
+                    {chartData.map((item, index) => {
                       const rawHeight = ((item.value || 0) / maxChartValue) * 100;
                       const barHeight = animateChart ? `${Math.max(rawHeight, 8)}%` : "0%";
 
                       return (
-                        <div className="bar-group" key={item.name}>
+                        <div className="bar-group" key={`${item.name}-${index}`}>
                           <div className="bar" style={{ height: barHeight }} />
                           <div className="bar-label-x">{item.name}</div>
                         </div>
@@ -1356,7 +1434,7 @@ export default function App() {
               <table>
                 <thead>
                   <tr>
-                    {headers.map((header) => (
+                    {tableHeaders.map((header) => (
                       <th key={header}>{header}</th>
                     ))}
                   </tr>
@@ -1365,18 +1443,18 @@ export default function App() {
                   {visibleRows.length ? (
                     visibleRows.map((row, index) => (
                       <tr key={index}>
-                        {headers.map((header) => (
+                        {tableHeaders.map((header) => (
                           <td key={header}>
                             {typeof row[header] === "number"
                               ? formatNumber(row[header])
-                              : row[header]}
+                              : row[header] ?? "-"}
                           </td>
                         ))}
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={headers.length || 1}>No matching records found.</td>
+                      <td colSpan={tableHeaders.length || 1}>No matching records found.</td>
                     </tr>
                   )}
                 </tbody>
