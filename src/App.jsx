@@ -54,6 +54,9 @@ export default function App() {
   const [hasUploaded, setHasUploaded] = useState(false);
 
   const [query, setQuery] = useState("");
+  const [activeQuery, setActiveQuery] = useState("");
+  const [hasAnalyzed, setHasAnalyzed] = useState(false);
+
   const [resultText, setResultText] = useState(
     "Upload your CSV and ask a question to generate smart insights."
   );
@@ -127,7 +130,9 @@ export default function App() {
   }, [rows, monthHeader, salesHeader]);
 
   const chartData = useMemo(() => {
-    if (!hasUploaded || !rows.length || !productHeader || !salesHeader) return [];
+    if (!hasUploaded || !hasAnalyzed || !rows.length || !productHeader || !salesHeader) {
+      return [];
+    }
 
     if (chartType === "top") {
       return sortedBySales.slice(0, 5).map((item) => ({
@@ -171,6 +176,7 @@ export default function App() {
     return [];
   }, [
     hasUploaded,
+    hasAnalyzed,
     rows,
     chartType,
     sortedBySales,
@@ -185,7 +191,7 @@ export default function App() {
   const filteredRows = useMemo(() => {
     if (!rows.length) return [];
 
-    const q = query.trim().toLowerCase();
+    const q = activeQuery.trim().toLowerCase();
     const ts = tableSearch.trim().toLowerCase();
 
     if (ts) {
@@ -194,6 +200,10 @@ export default function App() {
           String(row[header] ?? "").toLowerCase().includes(ts)
         )
       );
+    }
+
+    if (!hasAnalyzed) {
+      return rows;
     }
 
     if (q.includes("top product")) {
@@ -220,7 +230,7 @@ export default function App() {
 
     if (q.includes("region wise sales")) {
       return regionData.map((item) => ({
-        [productHeader || "Category"]: item.name,
+        [productHeader || "Product"]: item.name,
         [regionHeader || "Region"]: item.name,
         [monthHeader || "Month"]: "-",
         [salesHeader || "Sales"]: item.value,
@@ -240,8 +250,9 @@ export default function App() {
   }, [
     rows,
     headers,
-    query,
+    activeQuery,
     tableSearch,
+    hasAnalyzed,
     sortedBySales,
     averageSales,
     totalSales,
@@ -265,6 +276,7 @@ export default function App() {
       setAnimateChart(false);
       return;
     }
+
     setAnimateChart(false);
     const timer = setTimeout(() => setAnimateChart(true), 120);
     return () => clearTimeout(timer);
@@ -297,14 +309,18 @@ export default function App() {
       setCsvText(text);
       setFileName(file.name);
       setHasUploaded(true);
-      setChartType("top");
+
       setQuery("");
+      setActiveQuery("");
+      setHasAnalyzed(false);
       setTableSearch("");
       setRecentQueries([]);
       setRowsPerPage(8);
+      setChartType("top");
+
       setResultText("Dataset uploaded successfully.");
       setInsightText(
-        `Dataset ready. ${parsed.rows.length} rows loaded successfully. You can now explore top products, regional sales, monthly trends, and averages.`
+        `Dataset ready. ${parsed.rows.length} rows loaded successfully. Enter a query and click Analyze to generate charts and insights.`
       );
     };
     reader.readAsText(file);
@@ -321,12 +337,16 @@ export default function App() {
 
     if (!q) {
       setResultText("Please enter a question.");
-      setInsightText("Try queries like top product, total sales, average, or region wise sales.");
+      setInsightText(
+        "Try queries like top product, total sales, average, monthly sales, or region wise sales."
+      );
       return;
     }
 
-    setRecentQueries((prev) => [q, ...prev.filter((item) => item !== q)].slice(0, 5));
+    setHasAnalyzed(true);
+    setActiveQuery(q);
     setTableSearch("");
+    setRecentQueries((prev) => [q, ...prev.filter((item) => item !== q)].slice(0, 5));
 
     if (q.includes("top product")) {
       setChartType("top");
@@ -357,22 +377,26 @@ export default function App() {
     if (q.includes("average")) {
       setChartType("average");
       setResultText(`Average sales is ${formatNumber(Number(averageSales.toFixed(2)))}`);
-      setInsightText(`Average sales has been calculated successfully across all records.`);
+      setInsightText("Average sales has been calculated successfully across all records.");
       return;
     }
 
     if (q.includes("total sales")) {
       setChartType("total");
       setResultText(`Total sales is ${formatNumber(totalSales)}`);
-      setInsightText(`Overall sales across all uploaded records equal ${formatNumber(totalSales)}.`);
+      setInsightText(
+        `Overall sales across all uploaded records equal ${formatNumber(totalSales)}.`
+      );
       return;
     }
 
     if (q.includes("region wise sales")) {
       setChartType("region");
-      const summary = regionData.map((item) => `${item.name}: ${formatNumber(item.value)}`).join(", ");
+      const summary = regionData
+        .map((item) => `${item.name}: ${formatNumber(item.value)}`)
+        .join(", ");
       setResultText(`Region wise sales: ${summary}`);
-      setInsightText(`Regional comparison generated successfully.`);
+      setInsightText("Regional comparison generated successfully.");
       return;
     }
 
@@ -383,24 +407,29 @@ export default function App() {
       return;
     }
 
+    setChartType("top");
     setResultText("Query analyzed successfully.");
     setInsightText("Review the updated table, summary cards, and chart.");
   };
 
   const handleQuickQuery = (text) => {
     setQuery(text);
-    runAnalysis(text);
   };
 
   const resetDashboard = () => {
     setCsvText("");
     setFileName("");
     setHasUploaded(false);
+
     setQuery("");
+    setActiveQuery("");
+    setHasAnalyzed(false);
+
     setTableSearch("");
     setRecentQueries([]);
     setRowsPerPage(8);
     setChartType("top");
+
     setResultText("Upload your CSV and ask a question to generate smart insights.");
     setInsightText("Dashboard loaded successfully. Upload a CSV to unlock live visual analysis.");
   };
@@ -1220,8 +1249,8 @@ export default function App() {
                 <h3>How it works</h3>
                 <ul className="how-list">
                   <li>1. Upload file</li>
-                  <li>2. Ask question</li>
-                  <li>3. View chart + insights</li>
+                  <li>2. Type query</li>
+                  <li>3. Click Analyze</li>
                 </ul>
               </div>
             </div>
@@ -1299,8 +1328,8 @@ export default function App() {
                   <h3>Data Health</h3>
                   <ul>
                     <li>Dataset parsed successfully and ready for analysis.</li>
-                    <li>Search, summary, and table are active.</li>
-                    <li>Chart appears only after real CSV upload.</li>
+                    <li>Chart will appear only after Analyze is clicked.</li>
+                    <li>Table supports both query-based updates and manual search.</li>
                   </ul>
                 </div>
               </div>
@@ -1318,7 +1347,11 @@ export default function App() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
-              <button className="btn analyze-btn" onClick={() => runAnalysis()}>
+              <button
+                className="btn analyze-btn"
+                onClick={() => runAnalysis()}
+                disabled={!hasUploaded || !query.trim()}
+              >
                 Analyze
               </button>
             </div>
@@ -1348,10 +1381,14 @@ export default function App() {
             </div>
 
             <div className="info-box">
-              Suggested insights: compare region performance, find top products, view monthly trend, or check products above a sales threshold.
+              Suggested insights: compare region performance, find top products, view monthly trend, or check total and average sales.
             </div>
 
-            <div className="query-result">{resultText}</div>
+            <div className="query-result">
+              {hasAnalyzed
+                ? resultText
+                : "Enter a query and click Analyze to generate insights."}
+            </div>
 
             <div className="success-box">
               <strong>Insight:</strong> {insightText}
@@ -1377,7 +1414,7 @@ export default function App() {
             </div>
           </section>
 
-          {hasUploaded && chartData.length > 0 && (
+          {hasUploaded && hasAnalyzed && chartData.length > 0 && (
             <section className="panel chart-panel">
               <h2 className="section-title">{chartTitle}</h2>
 
