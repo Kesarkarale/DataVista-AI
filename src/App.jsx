@@ -133,7 +133,6 @@ export default function App() {
     "Dashboard loaded successfully. Upload a CSV to unlock live visual analysis."
   );
   const [recentQueries, setRecentQueries] = useState([]);
-  const [chatHistory, setChatHistory] = useState([]);
 
   const [tableSearch, setTableSearch] = useState("");
   const [rowsPerPage, setRowsPerPage] = useState(8);
@@ -449,7 +448,6 @@ export default function App() {
 
       setTableSearch("");
       setRecentQueries([]);
-      setChatHistory([]);
       setRowsPerPage(8);
       setChartType("top");
 
@@ -529,12 +527,6 @@ export default function App() {
       setInsightText(autoInsight);
 
       setRecentQueries((prev) => [q, ...prev.filter((item) => item !== q)].slice(0, 5));
-      setChatHistory((prev) => [
-        ...prev,
-        { type: "user", text: q },
-        { type: "bot", text: response },
-      ]);
-
       setLoading(false);
     }, 900);
   };
@@ -555,7 +547,6 @@ export default function App() {
 
     setTableSearch("");
     setRecentQueries([]);
-    setChatHistory([]);
     setRowsPerPage(8);
     setChartType("top");
 
@@ -769,7 +760,7 @@ export default function App() {
 
         .container {
           width: 100%;
-          max-width: 1380px;
+          max-width: 1280px;
           margin: 0 auto;
         }
 
@@ -782,7 +773,7 @@ export default function App() {
 
         .hero {
           padding: 34px 34px 30px;
-          margin-bottom: 26px;
+          margin-bottom: 24px;
         }
 
         .hero-header {
@@ -790,7 +781,7 @@ export default function App() {
           justify-content: space-between;
           align-items: center;
           gap: 18px;
-          margin-bottom: 26px;
+          margin-bottom: 24px;
           flex-wrap: wrap;
         }
 
@@ -813,16 +804,17 @@ export default function App() {
         }
 
         .hero-title h1 {
-          font-size: 58px;
+          font-size: 52px;
           line-height: 1;
           font-weight: 800;
-          letter-spacing: -1.5px;
+          letter-spacing: -1.2px;
         }
 
         .hero-title p {
-          margin-top: 6px;
-          font-size: 18px;
+          margin-top: 8px;
+          font-size: 17px;
           color: #c7d2fe;
+          max-width: 780px;
         }
 
         .logout-btn {
@@ -843,22 +835,22 @@ export default function App() {
         }
 
         .upload-card, .how-card {
-          border-radius: 26px;
-          padding: 34px 26px;
+          border-radius: 24px;
+          padding: 30px 24px;
           border: 1px solid rgba(122, 142, 255, 0.22);
           background: linear-gradient(135deg, rgba(56,47,120,.45), rgba(17,31,78,.45));
-          min-height: 210px;
+          min-height: 190px;
         }
 
         .upload-inner {
-          min-height: 140px;
+          min-height: 128px;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
           border: 1.5px dashed rgba(161,167,255,.3);
-          border-radius: 22px;
-          padding: 26px;
+          border-radius: 20px;
+          padding: 22px;
           cursor: pointer;
           transition: .28s ease;
         }
@@ -894,11 +886,11 @@ export default function App() {
         .how-list {
           list-style: none;
           display: grid;
-          gap: 18px;
-          font-size: 20px;
+          gap: 16px;
+          font-size: 19px;
           color: #d8defe;
           line-height: 1.5;
-          padding-top: 10px;
+          padding-top: 4px;
           max-width: 340px;
           margin: 0 auto;
         }
@@ -907,8 +899,8 @@ export default function App() {
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 18px;
-          margin-top: 24px;
+          gap: 16px;
+          margin-top: 22px;
         }
 
         .dataset-pill {
@@ -921,7 +913,7 @@ export default function App() {
           border: 1px solid rgba(16,185,129,.4);
           color: #d1fae5;
           font-weight: 700;
-          font-size: 20px;
+          font-size: 18px;
         }
 
         .dataset-pill.empty {
@@ -948,7 +940,7 @@ export default function App() {
         .btn {
           border: none;
           border-radius: 16px;
-          padding: 14px 26px;
+          padding: 14px 24px;
           font-size: 16px;
           font-weight: 700;
           cursor: pointer;
@@ -981,29 +973,29 @@ export default function App() {
         }
 
         .summary, .ask-panel, .chart-panel, .table-panel {
-          padding: 34px;
-          margin-bottom: 26px;
+          padding: 28px;
+          margin-bottom: 22px;
           animation: riseUp .7s ease;
         }
 
         .section-title {
           text-align: center;
-          font-size: 32px;
+          font-size: 30px;
           font-weight: 800;
-          margin-bottom: 28px;
+          margin-bottom: 24px;
         }
 
         .stats-grid {
           display: grid;
           grid-template-columns: repeat(5, 1fr);
-          gap: 18px;
-          margin-bottom: 24px;
+          gap: 16px;
+          margin-bottom: 20px;
         }
 
         .stat-card {
-          min-height: 120px;
-          border-radius: 22px;
-          padding: 26px 18px;
+          min-height: 112px;
+          border-radius: 20px;
+          padding: 22px 16px;
           background: rgba(18,34,79,.88);
           border: 1px solid rgba(111,133,221,.22);
           display: flex;
@@ -1014,65 +1006,65 @@ export default function App() {
 
         .stat-card h4 {
           color: #aeb8de;
-          font-size: 17px;
+          font-size: 16px;
           font-weight: 500;
-          margin-bottom: 16px;
+          margin-bottom: 14px;
           text-align: center;
         }
 
         .stat-card .value {
-          font-size: 28px;
+          font-size: 26px;
           font-weight: 800;
         }
 
         .dual-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 22px;
+          gap: 18px;
         }
 
         .mini-panel {
-          border-radius: 26px;
+          border-radius: 22px;
           background: rgba(15,28,68,.9);
           border: 1px solid rgba(111,133,221,.22);
-          padding: 26px;
-          min-height: 190px;
+          padding: 22px;
+          min-height: 170px;
         }
 
         .mini-panel h3 {
-          font-size: 22px;
-          margin-bottom: 16px;
+          font-size: 21px;
+          margin-bottom: 14px;
           text-align: center;
         }
 
         .mini-panel ul {
           list-style: none;
           display: grid;
-          gap: 12px;
+          gap: 10px;
         }
 
         .mini-panel li {
           color: #d7ddfb;
           background: rgba(255,255,255,.03);
           border: 1px solid rgba(255,255,255,.05);
-          border-radius: 16px;
-          padding: 14px 16px;
-          line-height: 1.6;
+          border-radius: 14px;
+          padding: 12px 14px;
+          line-height: 1.55;
         }
 
         .ask-title {
           text-align: center;
-          font-size: 34px;
+          font-size: 32px;
           font-weight: 800;
-          margin-bottom: 24px;
+          margin-bottom: 22px;
         }
 
         .query-row {
           display: grid;
-          grid-template-columns: 1fr 160px;
+          grid-template-columns: 1fr 170px;
           gap: 14px;
           align-items: center;
-          margin-bottom: 18px;
+          margin-bottom: 16px;
           max-width: 1040px;
           margin-left: auto;
           margin-right: auto;
@@ -1080,7 +1072,7 @@ export default function App() {
 
         .query-input, .table-search, .rows-select {
           width: 100%;
-          height: 58px;
+          height: 56px;
           border-radius: 18px;
           border: 1px solid rgba(145,157,215,.2);
           background: rgba(255,255,255,.06);
@@ -1095,7 +1087,7 @@ export default function App() {
         }
 
         .analyze-btn {
-          height: 58px;
+          height: 56px;
           background: linear-gradient(135deg, #6d5dfc, #8b5cf6);
         }
 
@@ -1103,8 +1095,8 @@ export default function App() {
           display: flex;
           flex-wrap: wrap;
           justify-content: center;
-          gap: 12px;
-          margin-bottom: 18px;
+          gap: 10px;
+          margin-bottom: 16px;
         }
 
         .chip {
@@ -1112,7 +1104,7 @@ export default function App() {
           border: 1px solid rgba(128,145,242,.35);
           background: rgba(94,110,218,.08);
           color: #e5e7eb;
-          padding: 12px 18px;
+          padding: 11px 16px;
           cursor: pointer;
           font-size: 15px;
           transition: .24s ease;
@@ -1123,59 +1115,53 @@ export default function App() {
           background: rgba(94,110,218,.16);
         }
 
-        .info-box, .success-box, .query-result, .recent-box {
-          max-width: 1060px;
-          margin-left: auto;
-          margin-right: auto;
-          border-radius: 22px;
-          padding: 20px 22px;
-          text-align: center;
-          margin-bottom: 18px;
-        }
-
         .info-box {
+          max-width: 1060px;
+          margin: 0 auto 18px;
+          border-radius: 20px;
+          padding: 16px 18px;
+          text-align: center;
           background: rgba(49,83,185,.22);
           border: 1px solid rgba(91,120,232,.35);
           color: #d7e3ff;
-          font-size: 19px;
-          line-height: 1.55;
-        }
-
-        .query-result {
-          font-size: 20px;
-          font-weight: 800;
-          color: #f8fafc;
-          padding-top: 6px;
-          padding-bottom: 6px;
-        }
-
-        .success-box {
-          background: rgba(16,185,129,.12);
-          border: 1px solid rgba(16,185,129,.35);
-          color: #d1fae5;
           font-size: 18px;
           line-height: 1.55;
         }
 
-        .recent-box {
-          background: rgba(49,83,185,.16);
-          border: 1px solid rgba(91,120,232,.25);
+        .result-card {
+          max-width: 1060px;
+          margin: 0 auto 18px;
+          padding: 22px;
+          border-radius: 22px;
+          background: linear-gradient(180deg, rgba(16,185,129,.12), rgba(59,130,246,.10));
+          border: 1px solid rgba(99,102,241,.25);
+          text-align: center;
         }
 
-        .recent-box h3 {
-          font-size: 22px;
-          margin-bottom: 18px;
+        .result-card h3 {
+          font-size: 28px;
+          font-weight: 800;
+          margin-bottom: 10px;
+          color: #ffffff;
         }
 
-        .recent-query-row {
+        .result-card p {
+          font-size: 17px;
+          color: #dbeafe;
+          line-height: 1.6;
+        }
+
+        .recent-inline {
+          max-width: 1060px;
+          margin: 0 auto 12px;
           display: flex;
-          justify-content: center;
-          flex-wrap: wrap;
           gap: 10px;
+          flex-wrap: wrap;
+          justify-content: center;
         }
 
         .recent-pill {
-          padding: 11px 18px;
+          padding: 10px 16px;
           border-radius: 999px;
           background: rgba(255,255,255,.06);
           border: 1px solid rgba(255,255,255,.08);
@@ -1186,7 +1172,7 @@ export default function App() {
           text-align: center;
           color: #93a1cc;
           font-size: 16px;
-          margin-top: 10px;
+          margin-top: 8px;
         }
 
         .loading-box {
@@ -1220,54 +1206,10 @@ export default function App() {
         .typing span:nth-child(2) { animation-delay: .15s; }
         .typing span:nth-child(3) { animation-delay: .3s; }
 
-        .chat-box {
-          max-width: 1060px;
-          margin: 0 auto 18px;
-          padding: 12px;
-          border-radius: 22px;
-          background: rgba(255,255,255,.03);
-          border: 1px solid rgba(255,255,255,.06);
-        }
-
-        .chat-msg {
-          display: flex;
-          margin-bottom: 12px;
-        }
-
-        .chat-msg.user {
-          justify-content: flex-end;
-        }
-
-        .chat-msg.bot {
-          justify-content: flex-start;
-        }
-
-        .chat-bubble {
-          max-width: 78%;
-          padding: 12px 16px;
-          border-radius: 18px;
-          line-height: 1.5;
-          font-size: 15px;
-          word-break: break-word;
-        }
-
-        .chat-msg.user .chat-bubble {
-          background: linear-gradient(135deg, #6366f1, #7c3aed);
-          color: white;
-          border-bottom-right-radius: 6px;
-        }
-
-        .chat-msg.bot .chat-bubble {
-          background: rgba(255,255,255,.08);
-          color: #e5e7eb;
-          border: 1px solid rgba(255,255,255,.08);
-          border-bottom-left-radius: 6px;
-        }
-
         .chart-wrap {
-          margin-top: 8px;
-          min-height: 420px;
-          padding: 18px;
+          margin-top: 6px;
+          height: 320px;
+          padding: 10px 8px 0;
           position: relative;
           overflow: hidden;
         }
@@ -1277,7 +1219,7 @@ export default function App() {
           align-items: center;
           justify-content: center;
           gap: 10px;
-          margin: 12px 0 8px;
+          margin: 10px 0 8px;
           color: #e7ebff;
           font-size: 18px;
         }
@@ -1297,9 +1239,9 @@ export default function App() {
         }
 
         .y-axis {
-          width: 90px;
+          width: 72px;
           position: relative;
-          padding-top: 24px;
+          padding-top: 8px;
         }
 
         .y-label {
@@ -1307,18 +1249,18 @@ export default function App() {
           left: 0;
           transform: translateY(50%);
           color: #c4cbe8;
-          font-size: 14px;
+          font-size: 13px;
         }
 
         .plot {
           flex: 1;
           position: relative;
-          padding: 24px 0 50px;
+          padding: 10px 0 28px;
           border-left: 1px solid rgba(255,255,255,.08);
           border-bottom: 1px solid rgba(255,255,255,.08);
           display: flex;
           align-items: flex-end;
-          gap: 26px;
+          gap: 18px;
         }
 
         .grid-line {
@@ -1330,8 +1272,8 @@ export default function App() {
 
         .bar-group {
           flex: 1;
-          min-width: 90px;
-          max-width: 160px;
+          min-width: 60px;
+          max-width: 120px;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -1341,25 +1283,25 @@ export default function App() {
 
         .bar {
           width: 100%;
-          border-radius: 18px 18px 0 0;
+          border-radius: 16px 16px 0 0;
           background: linear-gradient(180deg, #7068f3, #5b61e8);
           box-shadow: 0 14px 30px rgba(92,97,232,.25);
           transition: height 1s cubic-bezier(.2,.8,.2,1);
         }
 
         .bar-label-x {
-          margin-top: 12px;
-          font-size: 15px;
+          margin-top: 10px;
+          font-size: 14px;
           color: #d5daf7;
           text-align: center;
         }
 
         .line-chart-box {
-          height: 340px;
+          height: 250px;
           display: flex;
           align-items: flex-end;
-          gap: 14px;
-          padding: 24px 0 10px;
+          gap: 12px;
+          padding: 10px 0 6px;
           position: relative;
         }
 
@@ -1391,39 +1333,39 @@ export default function App() {
         .line-value {
           font-size: 12px;
           color: #cbd5e1;
-          margin-bottom: 8px;
+          margin-bottom: 6px;
           text-align: center;
         }
 
         .line-label {
-          margin-top: 10px;
+          margin-top: 8px;
           color: #d5daf7;
-          font-size: 14px;
+          font-size: 13px;
           text-align: center;
         }
 
         .pie-wrap {
           display: grid;
-          grid-template-columns: 280px 1fr;
-          gap: 24px;
+          grid-template-columns: 240px 1fr;
+          gap: 20px;
           align-items: center;
-          min-height: 320px;
+          min-height: 250px;
         }
 
         .pie-main {
-          width: 240px;
-          height: 240px;
+          width: 200px;
+          height: 200px;
           margin: 0 auto;
           border-radius: 50%;
-          border: 12px solid rgba(255,255,255,.08);
-          box-shadow: inset 0 0 0 18px rgba(10,16,34,.9);
+          border: 10px solid rgba(255,255,255,.08);
+          box-shadow: inset 0 0 0 16px rgba(10,16,34,.9);
           position: relative;
           overflow: hidden;
         }
 
         .pie-hole {
           position: absolute;
-          inset: 58px;
+          inset: 46px;
           background: linear-gradient(180deg, #0b1940, #081435);
           border-radius: 50%;
           border: 1px solid rgba(255,255,255,.08);
@@ -1433,8 +1375,8 @@ export default function App() {
           text-align: center;
           color: #e5e7eb;
           font-weight: 800;
-          padding: 16px;
-          font-size: 14px;
+          padding: 14px;
+          font-size: 13px;
           z-index: 2;
         }
 
@@ -1446,7 +1388,7 @@ export default function App() {
 
         .pie-legend {
           display: grid;
-          gap: 12px;
+          gap: 10px;
         }
 
         .pie-item {
@@ -1454,8 +1396,8 @@ export default function App() {
           align-items: center;
           justify-content: space-between;
           gap: 14px;
-          padding: 12px 14px;
-          border-radius: 16px;
+          padding: 10px 12px;
+          border-radius: 14px;
           background: rgba(255,255,255,.04);
           border: 1px solid rgba(255,255,255,.06);
         }
@@ -1477,6 +1419,7 @@ export default function App() {
           color: #c7d2fe;
           font-weight: 700;
           text-align: right;
+          font-size: 14px;
         }
 
         .table-head {
@@ -1484,12 +1427,12 @@ export default function App() {
           justify-content: space-between;
           align-items: center;
           gap: 16px;
-          margin-bottom: 24px;
+          margin-bottom: 20px;
           flex-wrap: wrap;
         }
 
         .table-head h2 {
-          font-size: 30px;
+          font-size: 28px;
           font-weight: 800;
         }
 
@@ -1515,15 +1458,15 @@ export default function App() {
         }
 
         th, td {
-          padding: 18px 16px;
+          padding: 16px 14px;
           text-align: left;
           border-bottom: 1px solid rgba(255,255,255,.07);
-          font-size: 16px;
+          font-size: 15px;
         }
 
         th {
           color: #f8fafc;
-          font-size: 17px;
+          font-size: 16px;
           font-weight: 800;
           background: rgba(255,255,255,.02);
         }
@@ -1559,10 +1502,10 @@ export default function App() {
         @media (max-width: 950px) {
           .hero-grid, .dual-grid, .query-row, .pie-wrap { grid-template-columns: 1fr; }
           .stats-grid { grid-template-columns: repeat(2, 1fr); }
-          .hero, .summary, .ask-panel, .chart-panel, .table-panel { padding: 24px 18px; }
+          .hero, .summary, .ask-panel, .chart-panel, .table-panel { padding: 22px 16px; }
           .hero-title h1 { font-size: 34px; }
-          .pie-main { width: 220px; height: 220px; }
-          .pie-hole { inset: 52px; }
+          .pie-main { width: 180px; height: 180px; }
+          .pie-hole { inset: 40px; }
         }
 
         @media (max-width: 640px) {
@@ -1570,10 +1513,11 @@ export default function App() {
           .hero-title h1 { font-size: 28px; }
           .hero-title p { font-size: 15px; }
           .section-title, .ask-title, .table-head h2 { font-size: 24px; }
-          .plot { gap: 12px; }
-          .bar-group { min-width: 56px; }
-          .chart-wrap { min-height: 340px; }
-          .chat-bubble { max-width: 92%; }
+          .plot { gap: 10px; }
+          .bar-group { min-width: 48px; }
+          .chart-wrap { height: 280px; }
+          .result-card h3 { font-size: 22px; }
+          .result-card p { font-size: 15px; }
         }
       `}</style>
 
@@ -1699,7 +1643,7 @@ export default function App() {
                   <ul>
                     <li>CSV upload and intelligent dashboard flow.</li>
                     <li>Query-based chart and table updates.</li>
-                    <li>Chat-style analysis output with smart insights.</li>
+                    <li>Professional compact dashboard layout.</li>
                   </ul>
                 </div>
               </div>
@@ -1751,8 +1695,7 @@ export default function App() {
             </div>
 
             <div className="info-box">
-              Suggested queries: top product, lowest product, total sales, average sales,
-              region wise sales, monthly sales trend.
+              Try: top product, lowest product, average sales, total sales, region wise sales, monthly sales.
             </div>
 
             {loading && (
@@ -1766,44 +1709,20 @@ export default function App() {
               </div>
             )}
 
-            <div className="query-result">
-              {hasAnalyzed
-                ? resultText
-                : "Enter a query and click Analyze to generate insights."}
-            </div>
-
-            <div className="success-box">
-              <strong>Insight:</strong> {insightText}
-            </div>
-
-            <div className="chat-box">
-              {chatHistory.length ? (
-                chatHistory.map((msg, index) => (
-                  <div key={index} className={`chat-msg ${msg.type}`}>
-                    <div className="chat-bubble">{msg.text}</div>
-                  </div>
-                ))
-              ) : (
-                <div className="chat-msg bot">
-                  <div className="chat-bubble">
-                    Upload a CSV, ask a query, and I will generate a chart, smart summary, and table insights.
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="recent-box">
-              <h3>Recent Queries</h3>
-              <div className="recent-query-row">
-                {recentQueries.length ? (
-                  recentQueries.map((item) => (
-                    <span key={item} className="recent-pill">{item}</span>
-                  ))
-                ) : (
-                  <span className="recent-pill">No recent queries yet</span>
-                )}
+            {hasAnalyzed && (
+              <div className="result-card">
+                <h3>{resultText}</h3>
+                <p>{insightText}</p>
               </div>
-            </div>
+            )}
+
+            {recentQueries.length > 0 && (
+              <div className="recent-inline">
+                {recentQueries.map((item) => (
+                  <span key={item} className="recent-pill">{item}</span>
+                ))}
+              </div>
+            )}
 
             <div className="small-meta">
               {hasUploaded
@@ -1870,7 +1789,7 @@ export default function App() {
                           <div className="line-point-wrap">
                             <div
                               className="line-stick"
-                              style={{ height: `${Math.max(rawHeight * 2.4, 12)}px` }}
+                              style={{ height: `${Math.max(rawHeight * 2, 12)}px` }}
                             />
                           </div>
                           <div className="line-label">{item.name}</div>
