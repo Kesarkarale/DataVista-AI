@@ -117,6 +117,10 @@ export default function App() {
     }
   });
 
+  const [currentUser, setCurrentUser] = useState(() => {
+    return localStorage.getItem("datavista_current_user") || "";
+  });
+
   const [csvText, setCsvText] = useState("");
   const [fileName, setFileName] = useState("");
   const [hasUploaded, setHasUploaded] = useState(false);
@@ -355,6 +359,13 @@ export default function App() {
       : "Monthly Sales Trend";
 
   useEffect(() => {
+    if (currentUser) {
+      setLoggedIn(true);
+      setName(currentUser);
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
     if (!chartData.length || chartType === "region" || chartType === "month") {
       setAnimateChart(false);
       return;
@@ -392,9 +403,13 @@ export default function App() {
     setUsers(updatedUsers);
     localStorage.setItem("datavista_users", JSON.stringify(updatedUsers));
 
-    alert("Account created successfully. Please login.");
-    setIsSignup(false);
+    alert("Account created successfully.");
+    setName(cleanName);
+    setLoggedIn(true);
     setPassword("");
+
+    localStorage.setItem("datavista_current_user", cleanName);
+    setCurrentUser(cleanName);
   };
 
   const handleLogin = (e) => {
@@ -420,12 +435,17 @@ export default function App() {
     setName(user.name || "");
     setLoggedIn(true);
     setPassword("");
+
+    localStorage.setItem("datavista_current_user", user.name);
+    setCurrentUser(user.name);
   };
 
   const handleLogout = () => {
     setLoggedIn(false);
     setEmail("");
     setPassword("");
+    setCurrentUser("");
+    localStorage.removeItem("datavista_current_user");
   };
 
   const handleUpload = (event) => {
@@ -1206,13 +1226,13 @@ export default function App() {
         .typing span:nth-child(2) { animation-delay: .15s; }
         .typing span:nth-child(3) { animation-delay: .3s; }
 
-         .chart-wrap {
+        .chart-wrap {
           margin-top: 10px;
           height: 420px;
           padding: 16px 18px 10px;
           position: relative;
           overflow: visible;
-          }
+        }
 
         .legend {
           display: flex;
@@ -1252,25 +1272,25 @@ export default function App() {
           font-size: 13px;
         }
 
-       .plot {
-        flex: 1;
-        position: relative;
-        height: 100%;
-        padding: 24px 0 50px;
-        border-left: 1px solid rgba(255,255,255,.08);
-        border-bottom: 1px solid rgba(255,255,255,.08);
-        display: flex;
-        align-items: flex-end;
-        gap: 22px;
+        .plot {
+          flex: 1;
+          position: relative;
+          height: 100%;
+          padding: 24px 0 50px;
+          border-left: 1px solid rgba(255,255,255,.08);
+          border-bottom: 1px solid rgba(255,255,255,.08);
+          display: flex;
+          align-items: flex-end;
+          gap: 22px;
         }
 
-         .grid-line {
+        .grid-line {
           position: absolute;
           left: 0;
           right: 0;
           border-top: 1px solid rgba(255,255,255,.06);
           z-index: 0;
-          }
+        }
 
         .bar-group {
           flex: 1;
@@ -1283,7 +1303,7 @@ export default function App() {
           height: 100%;
         }
 
-         .bar {
+        .bar {
           width: 100%;
           border-radius: 16px 16px 0 0;
           background: linear-gradient(180deg, #7068f3, #5b61e8);
@@ -1291,7 +1311,7 @@ export default function App() {
           transition: height 1s cubic-bezier(.2,.8,.2,1);
           position: relative;
           z-index: 2;
-          }
+        }
 
         .bar-label-x {
           margin-top: 10px;
@@ -1574,7 +1594,7 @@ export default function App() {
                   Current dataset: {fileName}
                 </div>
               ) : (
-                <div className="dataset-pill empty">
+                <div className="dataset-pill.empty dataset-pill">
                   No dataset uploaded yet
                 </div>
               )}
@@ -1770,7 +1790,7 @@ export default function App() {
 
                       {chartData.map((item, index) => {
                         const rawHeight = ((item.value || 0) / maxChartValue) * 100;
-                       const barHeight = animateChart ? `${Math.max(rawHeight, 12)}%` : "12%";
+                        const barHeight = animateChart ? `${Math.max(rawHeight, 12)}%` : "12%";
 
                         return (
                           <div className="bar-group" key={`${item.name}-${index}`}>
