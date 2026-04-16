@@ -1,16 +1,4 @@
- import { useEffect, useMemo, useState } from "react";
-
-const defaultCsv = `Product,Region,Month,Sales
-Laptop,West,Jan,20000
-Mobile,East,Feb,15000
-Tablet,North,Mar,12000
-Camera,South,Apr,11000
-Monitor,West,May,9000
-Keyboard,East,Jun,7000
-Mouse,North,Jul,6500
-Printer,South,Aug,8000
-Speaker,West,Sep,6000
-Router,East,Oct,7500`;
+import { useEffect, useMemo, useState } from "react";
 
 function parseCSV(text) {
   const lines = text
@@ -44,6 +32,7 @@ function formatNumber(value) {
 }
 
 function downloadCsv(filename, content) {
+  if (!content) return;
   const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -60,7 +49,7 @@ export default function App() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
 
-  const [csvText, setCsvText] = useState(defaultCsv);
+  const [csvText, setCsvText] = useState("");
   const [fileName, setFileName] = useState("");
   const [hasUploaded, setHasUploaded] = useState(false);
 
@@ -404,16 +393,16 @@ export default function App() {
   };
 
   const resetDashboard = () => {
-    setCsvText(defaultCsv);
-    setFileName("sample.csv");
+    setCsvText("");
+    setFileName("");
     setHasUploaded(false);
     setQuery("");
     setTableSearch("");
     setRecentQueries([]);
     setRowsPerPage(8);
     setChartType("top");
-    setResultText("Use the sample data or upload your own CSV to start analysis.");
-    setInsightText("Dashboard is ready. Upload your CSV to unlock live visual analysis.");
+    setResultText("Upload your CSV and ask a question to generate smart insights.");
+    setInsightText("Dashboard loaded successfully. Upload a CSV to unlock live visual analysis.");
   };
 
   const chartTitle =
@@ -751,6 +740,12 @@ export default function App() {
           font-size: 20px;
         }
 
+        .dataset-pill.empty {
+          background: rgba(255,255,255,.06);
+          border: 1px solid rgba(255,255,255,.12);
+          color: #cbd5e1;
+        }
+
         .dot {
           width: 8px;
           height: 8px;
@@ -780,6 +775,13 @@ export default function App() {
         .btn:hover {
           transform: translateY(-2px);
           box-shadow: 0 10px 22px rgba(0,0,0,.2);
+        }
+
+        .btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+          transform: none;
+          box-shadow: none;
         }
 
         .btn-reset {
@@ -1225,10 +1227,16 @@ export default function App() {
             </div>
 
             <div className="status-bar">
-              <div className="dataset-pill">
-                <span className="dot"></span>
-                Current dataset: {fileName}
-              </div>
+              {hasUploaded ? (
+                <div className="dataset-pill">
+                  <span className="dot"></span>
+                  Current dataset: {fileName}
+                </div>
+              ) : (
+                <div className="dataset-pill empty">
+                  No dataset uploaded yet
+                </div>
+              )}
 
               <div className="button-row">
                 <button className="btn btn-reset" onClick={resetDashboard}>
@@ -1238,6 +1246,7 @@ export default function App() {
                 <button
                   className="btn btn-download"
                   onClick={() => downloadCsv(fileName, csvText)}
+                  disabled={!hasUploaded}
                 >
                   Download CSV
                 </button>
@@ -1245,56 +1254,58 @@ export default function App() {
             </div>
           </section>
 
-          <section className="panel summary">
-            <h2 className="section-title">Dataset Summary</h2>
+          {hasUploaded && (
+            <section className="panel summary">
+              <h2 className="section-title">Dataset Summary</h2>
 
-            <div className="stats-grid">
-              <div className="stat-card">
-                <h4>Rows</h4>
-                <div className="value">{rows.length}</div>
+              <div className="stats-grid">
+                <div className="stat-card">
+                  <h4>Rows</h4>
+                  <div className="value">{rows.length}</div>
+                </div>
+
+                <div className="stat-card">
+                  <h4>Columns</h4>
+                  <div className="value">{headers.length}</div>
+                </div>
+
+                <div className="stat-card">
+                  <h4>Products</h4>
+                  <div className="value">{uniqueProducts}</div>
+                </div>
+
+                <div className="stat-card">
+                  <h4>Regions</h4>
+                  <div className="value">{uniqueRegions}</div>
+                </div>
+
+                <div className="stat-card">
+                  <h4>Total Sales</h4>
+                  <div className="value">{formatNumber(totalSales)}</div>
+                </div>
               </div>
 
-              <div className="stat-card">
-                <h4>Columns</h4>
-                <div className="value">{headers.length}</div>
-              </div>
+              <div className="dual-grid">
+                <div className="mini-panel">
+                  <h3>Highlights</h3>
+                  <ul>
+                    <li>Top selling product: <strong>{topProduct?.[productHeader] || "-"}</strong></li>
+                    <li>Highest sales value: <strong>{formatNumber(topProduct?.[salesHeader] || 0)}</strong></li>
+                    <li>Average sales: <strong>{formatNumber(Number(averageSales.toFixed(2)))}</strong></li>
+                  </ul>
+                </div>
 
-              <div className="stat-card">
-                <h4>Products</h4>
-                <div className="value">{uniqueProducts}</div>
+                <div className="mini-panel">
+                  <h3>Data Health</h3>
+                  <ul>
+                    <li>Dataset parsed successfully and ready for analysis.</li>
+                    <li>Search, summary, and table are active.</li>
+                    <li>Chart appears only after real CSV upload.</li>
+                  </ul>
+                </div>
               </div>
-
-              <div className="stat-card">
-                <h4>Regions</h4>
-                <div className="value">{uniqueRegions}</div>
-              </div>
-
-              <div className="stat-card">
-                <h4>Total Sales</h4>
-                <div className="value">{formatNumber(totalSales)}</div>
-              </div>
-            </div>
-
-            <div className="dual-grid">
-              <div className="mini-panel">
-                <h3>Highlights</h3>
-                <ul>
-                  <li>Top selling product: <strong>{topProduct?.[productHeader] || "-"}</strong></li>
-                  <li>Highest sales value: <strong>{formatNumber(topProduct?.[salesHeader] || 0)}</strong></li>
-                  <li>Average sales: <strong>{formatNumber(Number(averageSales.toFixed(2)))}</strong></li>
-                </ul>
-              </div>
-
-              <div className="mini-panel">
-                <h3>Data Health</h3>
-                <ul>
-                  <li>Dataset parsed successfully and ready for analysis.</li>
-                  <li>Search, summary, and table are active.</li>
-                  <li>Chart appears only after real CSV upload.</li>
-                </ul>
-              </div>
-            </div>
-          </section>
+            </section>
+          )}
 
           <section className="panel ask-panel">
             <h2 className="ask-title">Ask Your Data</h2>
@@ -1321,7 +1332,16 @@ export default function App() {
                 "region wise sales",
                 "lowest product",
               ].map((chip) => (
-                <button key={chip} className="chip" onClick={() => handleQuickQuery(chip)}>
+                <button
+                  key={chip}
+                  className="chip"
+                  onClick={() => handleQuickQuery(chip)}
+                  disabled={!hasUploaded}
+                  style={{
+                    opacity: hasUploaded ? 1 : 0.5,
+                    cursor: hasUploaded ? "pointer" : "not-allowed",
+                  }}
+                >
                   {chip}
                 </button>
               ))}
@@ -1351,7 +1371,9 @@ export default function App() {
             </div>
 
             <div className="small-meta">
-              Total Rows: {rows.length} | Total Columns: {headers.length}
+              {hasUploaded
+                ? `Total Rows: ${rows.length} | Total Columns: ${headers.length}`
+                : "Upload CSV to begin analysis"}
             </div>
           </section>
 
@@ -1404,63 +1426,65 @@ export default function App() {
             </section>
           )}
 
-          <section className="panel table-panel">
-            <div className="table-head">
-              <h2>Uploaded Data Table</h2>
+          {hasUploaded && (
+            <section className="panel table-panel">
+              <div className="table-head">
+                <h2>Uploaded Data Table</h2>
 
-              <div className="table-controls">
-                <input
-                  className="table-search"
-                  type="text"
-                  placeholder="Search in table..."
-                  value={tableSearch}
-                  onChange={(e) => setTableSearch(e.target.value)}
-                />
+                <div className="table-controls">
+                  <input
+                    className="table-search"
+                    type="text"
+                    placeholder="Search in table..."
+                    value={tableSearch}
+                    onChange={(e) => setTableSearch(e.target.value)}
+                  />
 
-                <select
-                  className="rows-select"
-                  value={rowsPerPage}
-                  onChange={(e) => setRowsPerPage(Number(e.target.value))}
-                >
-                  <option value={5}>5 rows</option>
-                  <option value={8}>8 rows</option>
-                  <option value={10}>10 rows</option>
-                  <option value={15}>15 rows</option>
-                </select>
+                  <select
+                    className="rows-select"
+                    value={rowsPerPage}
+                    onChange={(e) => setRowsPerPage(Number(e.target.value))}
+                  >
+                    <option value={5}>5 rows</option>
+                    <option value={8}>8 rows</option>
+                    <option value={10}>10 rows</option>
+                    <option value={15}>15 rows</option>
+                  </select>
+                </div>
               </div>
-            </div>
 
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    {tableHeaders.map((header) => (
-                      <th key={header}>{header}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {visibleRows.length ? (
-                    visibleRows.map((row, index) => (
-                      <tr key={index}>
-                        {tableHeaders.map((header) => (
-                          <td key={header}>
-                            {typeof row[header] === "number"
-                              ? formatNumber(row[header])
-                              : row[header] ?? "-"}
-                          </td>
-                        ))}
-                      </tr>
-                    ))
-                  ) : (
+              <div className="table-wrap">
+                <table>
+                  <thead>
                     <tr>
-                      <td colSpan={tableHeaders.length || 1}>No matching records found.</td>
+                      {tableHeaders.map((header) => (
+                        <th key={header}>{header}</th>
+                      ))}
                     </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
+                  </thead>
+                  <tbody>
+                    {visibleRows.length ? (
+                      visibleRows.map((row, index) => (
+                        <tr key={index}>
+                          {tableHeaders.map((header) => (
+                            <td key={header}>
+                              {typeof row[header] === "number"
+                                ? formatNumber(row[header])
+                                : row[header] ?? "-"}
+                            </td>
+                          ))}
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={tableHeaders.length || 1}>No matching records found.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
         </div>
       </div>
     </>
