@@ -70,22 +70,28 @@ Monitor,9000,Jul,North
 ## 📸 Screenshots
 
 **SignUp Page**
+
 ![SignUp Page](SignPage.png)
 
 **Login Page**
+
 ![Login Page](LoginPage.png)
   
 **Dashboard Overview**
+
 ![Dashboard Overview](DashboardOverview.png)
 ![Dashboard Overview2](DashboardOverview2.png)
   
 **Dataset Summary**
+
 ![Dataset Summary](DatasetSummary.png)
   
 **Charts View**
+
 ![Charts View](ChartsView.png)
   
 **Table with Filters & Pagination**
+
 ![Table with Filters & Pagination](TablewithFilters&Pagination.png)
 
 ---
