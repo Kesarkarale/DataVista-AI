@@ -1106,10 +1106,8 @@ export default function App() {
     return (
       <>
 <style>{`
-  * { box-sizing: border-box; margin: 0; padding: 0; transition: all 0.3s ease; }
-
+  * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body, #root { min-height: 100%; }
-
   body {
     font-family: Inter, Arial, sans-serif;
     background:
@@ -1125,7 +1123,7 @@ export default function App() {
     align-items: center;
     justify-content: center;
     padding: 24px;
-    animation: pageEnter 1s cubic-bezier(.22,1,.36,1);
+    animation: pageFade 0.9s ease;
   }
 
   .auth-card {
@@ -1136,12 +1134,12 @@ export default function App() {
     border-radius: 30px;
     padding: 34px 28px;
     box-shadow: 0 16px 42px rgba(0, 0, 0, 0.28);
-    animation: authCardIn 1.1s cubic-bezier(.22,1,.36,1);
+    animation: authCardIn 0.85s cubic-bezier(.22,1,.36,1);
   }
 
   .auth-card:hover {
-    transform: translateY(-6px) scale(1.02);
-    box-shadow: 0 26px 55px rgba(0, 0, 0, 0.4);
+    transform: translateY(-4px);
+    box-shadow: 0 22px 48px rgba(0, 0, 0, 0.34);
   }
 
   .auth-logo {
@@ -1155,7 +1153,7 @@ export default function App() {
     font-size: 30px;
     background: linear-gradient(135deg, #7c4dff, #ff4da6);
     box-shadow: 0 12px 30px rgba(124, 77, 255, 0.35);
-    animation: floatStrong 2s ease-in-out infinite;
+    animation: floatGlow 3s ease-in-out infinite;
   }
 
   .auth-title {
@@ -1169,8 +1167,49 @@ export default function App() {
   .auth-subtitle {
     text-align: center;
     color: #c7d2fe;
+    line-height: 1.6;
     margin-bottom: 24px;
-    animation: fadeSlideUp 1s ease;
+    font-size: 15px;
+    animation: fadeSlideUp 0.95s ease;
+  }
+
+  .auth-message {
+    margin-bottom: 16px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+    animation: fadeSlideUp 0.35s ease;
+  }
+
+  .auth-message.error {
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    color: #fecaca;
+  }
+
+  .auth-message.success {
+    background: rgba(34, 197, 94, 0.12);
+    border: 1px solid rgba(34, 197, 94, 0.35);
+    color: #bbf7d0;
+  }
+
+  .form-group {
+    margin-bottom: 16px;
+    animation: fadeSlideUp 0.7s ease;
+  }
+
+  .label {
+    display: block;
+    margin-bottom: 8px;
+    color: #e5e7eb;
+    font-weight: 700;
+    font-size: 14px;
+  }
+
+  .input-wrap {
+    position: relative;
   }
 
   .input {
@@ -1183,57 +1222,128 @@ export default function App() {
     padding: 0 18px;
     font-size: 15px;
     outline: none;
+    transition:
+      transform 0.22s ease,
+      border-color 0.22s ease,
+      box-shadow 0.22s ease,
+      background 0.22s ease;
+  }
+
+  .input.password {
+    padding-right: 70px;
+  }
+
+  .input::placeholder { color: #92a0d3; }
+
+  .input:hover {
+    background: rgba(255,255,255,0.08);
   }
 
   .input:focus {
-    transform: scale(1.05);
-    box-shadow: 0 0 0 6px rgba(99,102,241,0.2);
+    border-color: rgba(129, 140, 248, 0.7);
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
+    transform: scale(1.02);
+  }
+
+  .toggle-password {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: none;
+    background: transparent;
+    color: #c7d2fe;
+    cursor: pointer;
+    font-weight: 700;
+    transition: color 0.2s ease, transform 0.2s ease;
+  }
+
+  .toggle-password:hover {
+    color: white;
+    transform: translateY(-50%) scale(1.06);
   }
 
   .auth-btn {
     width: 100%;
     height: 56px;
+    border: none;
     border-radius: 16px;
     background: linear-gradient(135deg, #6d5dfc, #8b5cf6);
     color: white;
     font-size: 16px;
     font-weight: 800;
     cursor: pointer;
+    transition: transform 0.24s ease, box-shadow 0.24s ease, filter 0.24s ease;
+    margin-top: 8px;
     position: relative;
     overflow: hidden;
   }
 
+  .auth-btn::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg, transparent, rgba(255,255,255,0.22), transparent);
+    transform: translateX(-120%);
+    transition: transform 0.6s ease;
+  }
+
   .auth-btn:hover {
-    transform: translateY(-6px) scale(1.05);
-    box-shadow: 0 20px 45px rgba(124,77,255,0.5);
+    transform: translateY(-3px) scale(1.01);
+    box-shadow: 0 16px 36px rgba(109, 93, 252, 0.38);
+    filter: brightness(1.03);
+  }
+
+  .auth-btn:hover::after {
+    transform: translateX(120%);
   }
 
   .auth-btn:active {
-    transform: scale(0.94);
+    transform: scale(0.97);
   }
 
-  /* ANIMATIONS */
-
-  @keyframes pageEnter {
-    from { opacity: 0; transform: translateY(60px) scale(0.9); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
+  .switch-auth {
+    margin-top: 18px;
+    text-align: center;
+    color: #c7d2fe;
+    font-size: 14px;
+    animation: fadeSlideUp 1.05s ease;
   }
 
-  @keyframes authCardIn {
-    from { opacity: 0; transform: translateY(70px) scale(0.85); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
+  .switch-link {
+    color: #a78bfa;
+    font-weight: 700;
+    cursor: pointer;
+    margin-left: 6px;
+    transition: color 0.2s ease, letter-spacing 0.2s ease;
   }
+
+  .switch-link:hover {
+    color: #c4b5fd;
+    letter-spacing: 0.2px;
+  }
+
+  @keyframes pageFade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+@keyframes authCardIn {
+  from { opacity: 0; transform: translateY(60px) scale(0.88); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
 
   @keyframes fadeSlideUp {
-    from { opacity: 0; transform: translateY(20px); }
+    from { opacity: 0; transform: translateY(16px); }
     to { opacity: 1; transform: translateY(0); }
   }
 
-  @keyframes floatStrong {
-    0%,100% { transform: translateY(0); }
-    50% { transform: translateY(-12px) scale(1.08); }
+  @keyframes floatGlow {
+    0%, 100% { transform: translateY(0); box-shadow: 0 12px 30px rgba(124, 77, 255, 0.35); }
+    50% { transform: translateY(-4px); box-shadow: 0 18px 36px rgba(124, 77, 255, 0.45); }
   }
 `}</style>
+
         <div className="auth-page">
           <div className="auth-card">
             <div className="auth-logo">✦</div>
