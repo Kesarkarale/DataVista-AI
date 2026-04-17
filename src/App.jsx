@@ -121,6 +121,9 @@ export default function App() {
     return localStorage.getItem("datavista_current_user") || "";
   });
 
+  const [authMessage, setAuthMessage] = useState("");
+  const [authMessageType, setAuthMessageType] = useState("");
+
   const [csvText, setCsvText] = useState("");
   const [fileName, setFileName] = useState("");
   const [hasUploaded, setHasUploaded] = useState(false);
@@ -383,13 +386,15 @@ export default function App() {
     const cleanPassword = password.trim();
 
     if (!cleanName || !cleanEmail || !cleanPassword) {
-      alert("Please fill all fields.");
+      setAuthMessage("Please fill all fields.");
+      setAuthMessageType("error");
       return;
     }
 
     const exists = users.find((u) => u.email === cleanEmail);
     if (exists) {
-      alert("Account already exists with this email.");
+      setAuthMessage("Account already exists with this email.");
+      setAuthMessageType("error");
       return;
     }
 
@@ -403,7 +408,9 @@ export default function App() {
     setUsers(updatedUsers);
     localStorage.setItem("datavista_users", JSON.stringify(updatedUsers));
 
-    alert("Account created successfully.");
+    setAuthMessage("Account created successfully.");
+    setAuthMessageType("success");
+
     setName(cleanName);
     setLoggedIn(true);
     setPassword("");
@@ -419,7 +426,8 @@ export default function App() {
     const cleanPassword = password.trim();
 
     if (!cleanEmail || !cleanPassword) {
-      alert("Please enter email and password.");
+      setAuthMessage("Please enter email and password.");
+      setAuthMessageType("error");
       return;
     }
 
@@ -428,9 +436,13 @@ export default function App() {
     );
 
     if (!user) {
-      alert("Invalid email or password.");
+      setAuthMessage("Invalid email or password.");
+      setAuthMessageType("error");
       return;
     }
+
+    setAuthMessage("");
+    setAuthMessageType("");
 
     setName(user.name || "");
     setLoggedIn(true);
@@ -445,6 +457,8 @@ export default function App() {
     setEmail("");
     setPassword("");
     setCurrentUser("");
+    setAuthMessage("");
+    setAuthMessageType("");
     localStorage.removeItem("datavista_current_user");
   };
 
@@ -634,6 +648,24 @@ export default function App() {
             margin-bottom: 24px;
             font-size: 15px;
           }
+          .auth-message {
+            margin-bottom: 16px;
+            padding: 14px 16px;
+            border-radius: 14px;
+            font-size: 14px;
+            font-weight: 600;
+            text-align: center;
+          }
+          .auth-message.error {
+            background: rgba(239, 68, 68, 0.12);
+            border: 1px solid rgba(239, 68, 68, 0.35);
+            color: #fecaca;
+          }
+          .auth-message.success {
+            background: rgba(34, 197, 94, 0.12);
+            border: 1px solid rgba(34, 197, 94, 0.35);
+            color: #bbf7d0;
+          }
           .form-group { margin-bottom: 16px; }
           .label {
             display: block;
@@ -700,6 +732,12 @@ export default function App() {
                 : "Login with your email and password to access the AI data dashboard."}
             </div>
 
+            {authMessage && (
+              <div className={`auth-message ${authMessageType}`}>
+                {authMessage}
+              </div>
+            )}
+
             <form onSubmit={isSignup ? handleSignup : handleLogin}>
               {isSignup && (
                 <div className="form-group">
@@ -748,6 +786,8 @@ export default function App() {
                 onClick={() => {
                   setIsSignup(!isSignup);
                   setPassword("");
+                  setAuthMessage("");
+                  setAuthMessageType("");
                 }}
               >
                 {isSignup ? "Login" : "Sign Up"}
@@ -1594,7 +1634,7 @@ export default function App() {
                   Current dataset: {fileName}
                 </div>
               ) : (
-                <div className="dataset-pill.empty dataset-pill">
+                <div className="dataset-pill empty">
                   No dataset uploaded yet
                 </div>
               )}
