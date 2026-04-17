@@ -1128,7 +1128,7 @@ export default function App() {
 
   .auth-card {
     width: 100%;
-    max-width: 490px;
+    max-width: 580px;
     background: linear-gradient(180deg, rgba(11, 25, 64, 0.96), rgba(8, 20, 53, 0.96));
     border: 1px solid rgba(102, 126, 234, 0.22);
     border-radius: 30px;
