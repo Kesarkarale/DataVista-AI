@@ -110,6 +110,19 @@ function downloadCsv(filename, content) {
   URL.revokeObjectURL(url);
 }
 
+function downloadTextFile(filename, content, mimeType = "text/plain;charset=utf-8;") {
+  if (!content) return;
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 function normalizeMonth(value) {
   const monthMap = {
     jan: 1,
@@ -251,6 +264,47 @@ function getPageNumbers(currentPage, totalPages) {
   return pages;
 }
 
+function buildReportContent({
+  currentUserName,
+  fileName,
+  rowsCount,
+  columnsCount,
+  totalSales,
+  averageSales,
+  topProductName,
+  topProductSales,
+  bestRegion,
+  bestMonth,
+  recentQueries,
+}) {
+  return `
+DATAVISTA AI DASHBOARD REPORT
+=============================
+
+User: ${currentUserName || "-"}
+Dataset: ${fileName || "-"}
+Rows: ${rowsCount}
+Columns: ${columnsCount}
+
+SUMMARY
+-------
+Total Sales: ${formatNumber(totalSales)}
+Average Sales: ${formatNumber(Number(averageSales.toFixed(2)))}
+Top Product: ${topProductName || "-"}
+Top Product Sales: ${formatNumber(topProductSales || 0)}
+Best Region: ${bestRegion || "-"}
+Best Month: ${bestMonth || "-"}
+
+RECENT QUERIES
+--------------
+${recentQueries.length ? recentQueries.map((q, i) => `${i + 1}. ${q}`).join("\n") : "No recent queries"}
+
+INSIGHT
+-------
+This report was generated from the uploaded CSV dataset using DataVista AI Dashboard.
+`;
+}
+
 export default function App() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [isSignup, setIsSignup] = useState(false);
@@ -281,6 +335,17 @@ export default function App() {
       return null;
     }
   });
+
+  const [analysisHistory, setAnalysisHistory] = useState(() => {
+    try {
+      const saved = localStorage.getItem("datavista_analysis_history");
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const [userHistory, setUserHistory] = useState([]);
 
   const [authMessage, setAuthMessage] = useState("");
   const [authMessageType, setAuthMessageType] = useState("");
@@ -321,14 +386,27 @@ export default function App() {
   const parsedData = useMemo(() => parseCSV(csvText), [csvText]);
   const headers = parsedData.headers;
   const rows = parsedData.rows;
-  const parsedError = parsedData.error;
 
   const productHeader =
-    headers.find((h) => h.toLowerCase().includes("product")) || headers[0] || "";
+    headers.find((h) => h.toLowerCase().includes("product")) ||
+    headers.find((h) => h.toLowerCase().includes("item")) ||
+    headers[0] ||
+    "";
+
   const regionHeader =
-    headers.find((h) => h.toLowerCase().includes("region")) || "";
-  const monthHeader = headers.find((h) => h.toLowerCase().includes("month")) || "";
-  const salesHeader = headers.find((h) => h.toLowerCase().includes("sales")) || "";
+    headers.find((h) => h.toLowerCase().includes("region")) ||
+    headers.find((h) => h.toLowerCase().includes("area")) ||
+    headers.find((h) => h.toLowerCase().includes("zone")) ||
+    "";
+
+  const monthHeader =
+    headers.find((h) => h.toLowerCase().includes("month")) || "";
+
+  const salesHeader =
+    headers.find((h) => h.toLowerCase().includes("sales")) ||
+    headers.find((h) => h.toLowerCase().includes("revenue")) ||
+    headers.find((h) => h.toLowerCase().includes("amount")) ||
+    "";
 
   const totalSales = useMemo(() => {
     if (!salesHeader) return 0;
@@ -397,6 +475,14 @@ export default function App() {
 
     return Object.values(map).sort((a, b) => a.order - b.order);
   }, [rows, monthHeader, salesHeader]);
+
+  const bestRegion = regionData.length
+    ? [...regionData].sort((a, b) => b.value - a.value)[0]?.name
+    : "-";
+
+  const bestMonth = monthData.length
+    ? [...monthData].sort((a, b) => b.value - a.value)[0]?.name
+    : "-";
 
   const uniqueRegionOptions = useMemo(() => {
     if (!regionHeader) return [];
@@ -614,6 +700,11 @@ export default function App() {
     return ["Column 1"];
   }, [headers]);
 
+  const filteredCsvContent = useMemo(() => {
+    if (!tableHeaders.length || !filteredRows.length) return "";
+    return toCsvContent(tableHeaders, filteredRows);
+  }, [tableHeaders, filteredRows]);
+
   useEffect(() => {
     if (currentUser?.name) {
       setLoggedIn(true);
@@ -623,6 +714,16 @@ export default function App() {
       setName("");
     }
   }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser?.email) {
+      setUserHistory([]);
+      return;
+    }
+
+    const history = analysisHistory[currentUser.email] || [];
+    setUserHistory(history);
+  }, [currentUser, analysisHistory]);
 
   useEffect(() => {
     if (!chartData.length || chartType === "region" || chartType === "month") {
@@ -695,7 +796,7 @@ export default function App() {
     setAuthMessageType("success");
 
     setSignupName("");
-    setEmail(cleanEmail);
+    setEmail("");
     setPassword("");
     setConfirmPassword("");
     setIsSignup(false);
@@ -732,10 +833,38 @@ export default function App() {
     setAuthMessageType("");
     setLoggedIn(true);
     setName(user.name);
+    setEmail("");
     setPassword("");
     setConfirmPassword("");
     setCurrentUser(sessionUser);
     sessionStorage.setItem("datavista_current_user", JSON.stringify(sessionUser));
+  };
+
+  const resetDashboard = () => {
+    setCsvText("");
+    setFileName("");
+    setHasUploaded(false);
+    setUploadError("");
+
+    setQuery("");
+    setActiveQuery("");
+    setHasAnalyzed(false);
+    setLoading(false);
+
+    setTableSearch("");
+    setRecentQueries([]);
+    setRowsPerPage(8);
+    setCustomRowsInput("8");
+    setCurrentPage(1);
+    setChartType("top");
+    setSortConfig({ key: "", direction: "asc" });
+    setRegionFilter("all");
+    setMonthFilter("all");
+
+    setResultText("Upload your CSV and ask a question to generate smart insights.");
+    setInsightText(
+      "Dashboard loaded successfully. Upload a CSV to unlock live visual analysis."
+    );
   };
 
   const handleLogout = () => {
@@ -814,7 +943,7 @@ export default function App() {
 
     if (!salesHeader) {
       setResultText("Sales column not found.");
-      setInsightText("Your CSV must contain a sales column for analysis.");
+      setInsightText("Your CSV must contain a sales, revenue, or amount column for analysis.");
       return;
     }
 
@@ -830,7 +959,7 @@ export default function App() {
 
     setTimeout(() => {
       let nextChartType = "top";
-      let response = "Query analyzed successfully.";
+      let response = "";
       let supported = true;
 
       if (q.includes("top") || q.includes("best") || q.includes("highest")) {
@@ -855,10 +984,8 @@ export default function App() {
         response = `Total sales is ${formatNumber(totalSales)}`;
       } else if (q.includes("region")) {
         if (!regionHeader) {
-          supported = false;
-          response = "Region column not found.";
-          setResultText(response);
-          setInsightText("This dataset does not contain a region column.");
+          setResultText("Region column not found.");
+          setInsightText("This dataset does not contain a region, area, or zone column.");
           setLoading(false);
           return;
         }
@@ -866,9 +993,7 @@ export default function App() {
         response = "Showing region wise sales distribution.";
       } else if (q.includes("month") || q.includes("monthly")) {
         if (!monthHeader) {
-          supported = false;
-          response = "Month column not found.";
-          setResultText(response);
+          setResultText("Month column not found.");
           setInsightText("This dataset does not contain a month column.");
           setLoading(false);
           return;
@@ -907,7 +1032,32 @@ export default function App() {
         setCurrentPage(1);
         setResultText(response);
         setInsightText(autoInsight);
-        setRecentQueries((prev) => [q, ...prev.filter((item) => item !== q)].slice(0, 5));
+
+        const updatedRecentQueries = [q, ...recentQueries.filter((item) => item !== q)].slice(0, 5);
+        setRecentQueries(updatedRecentQueries);
+
+        if (currentUser?.email) {
+          const historyEntry = {
+            query: q,
+            result: response,
+            insight: autoInsight,
+            dataset: fileName || "-",
+            time: new Date().toLocaleString("en-IN"),
+          };
+
+          setAnalysisHistory((prev) => {
+            const updated = {
+              ...prev,
+              [currentUser.email]: [
+                historyEntry,
+                ...(prev[currentUser.email] || []),
+              ].slice(0, 10),
+            };
+
+            localStorage.setItem("datavista_analysis_history", JSON.stringify(updated));
+            return updated;
+          });
+        }
       }
 
       setLoading(false);
@@ -916,33 +1066,6 @@ export default function App() {
 
   const handleQuickQuery = (text) => {
     setQuery(text);
-  };
-
-  const resetDashboard = () => {
-    setCsvText("");
-    setFileName("");
-    setHasUploaded(false);
-    setUploadError("");
-
-    setQuery("");
-    setActiveQuery("");
-    setHasAnalyzed(false);
-    setLoading(false);
-
-    setTableSearch("");
-    setRecentQueries([]);
-    setRowsPerPage(8);
-    setCustomRowsInput("8");
-    setCurrentPage(1);
-    setChartType("top");
-    setSortConfig({ key: "", direction: "asc" });
-    setRegionFilter("all");
-    setMonthFilter("all");
-
-    setResultText("Upload your CSV and ask a question to generate smart insights.");
-    setInsightText(
-      "Dashboard loaded successfully. Upload a CSV to unlock live visual analysis."
-    );
   };
 
   const clearFilters = () => {
@@ -978,11 +1101,6 @@ export default function App() {
     setCustomRowsInput(String(safeValue));
     setCurrentPage(1);
   };
-
-  const filteredCsvContent = useMemo(() => {
-    if (!tableHeaders.length || !filteredRows.length) return "";
-    return toCsvContent(tableHeaders, filteredRows);
-  }, [tableHeaders, filteredRows]);
 
   if (!loggedIn) {
     return (
@@ -2132,7 +2250,7 @@ export default function App() {
                 <div className="hero-title">
                   <h1>DataVista AI Dashboard</h1>
                   <p>
-                    Welcome{name ? `, ${name}` : ""}! Upload data, ask questions, and get instant charts, insights, filters, sorting, and summaries.
+                    Welcome{name ? `, ${name}` : ""}! Upload data, ask questions, and get instant charts, insights, filters, sorting, exports, and summaries.
                   </p>
                 </div>
               </div>
@@ -2204,6 +2322,34 @@ export default function App() {
                 >
                   Export Filtered CSV
                 </button>
+
+                <button
+                  className="btn btn-export"
+                  onClick={() => {
+                    const reportContent = buildReportContent({
+                      currentUserName: name,
+                      fileName,
+                      rowsCount: rows.length,
+                      columnsCount: headers.length,
+                      totalSales,
+                      averageSales,
+                      topProductName: topProduct?.[productHeader] || "-",
+                      topProductSales: topProduct?.[salesHeader] || 0,
+                      bestRegion,
+                      bestMonth,
+                      recentQueries,
+                    });
+
+                    downloadTextFile(
+                      fileName ? `${fileName.replace(".csv", "")}_report.txt` : "datavista_report.txt",
+                      reportContent,
+                      "text/plain;charset=utf-8;"
+                    );
+                  }}
+                  disabled={!hasUploaded}
+                >
+                  Download Report
+                </button>
               </div>
             </div>
           </section>
@@ -2260,7 +2406,7 @@ export default function App() {
                   <ul>
                     <li>CSV upload and intelligent dashboard flow.</li>
                     <li>Query-based chart and table updates with filters and sorting.</li>
-                    <li>Professional compact dashboard layout with export support.</li>
+                    <li>Professional compact dashboard layout with export and history support.</li>
                   </ul>
                 </div>
               </div>
@@ -2348,6 +2494,40 @@ export default function App() {
                 : "Upload CSV to begin analysis"}
             </div>
           </section>
+
+          {loggedIn && (
+            <section className="panel summary">
+              <h2 className="section-title">Recent Analysis History</h2>
+
+              <div className="dual-grid">
+                <div className="mini-panel">
+                  <h3>User Activity</h3>
+                  <ul>
+                    <li>User: <strong>{name || "-"}</strong></li>
+                    <li>Saved Analyses: <strong>{userHistory.length}</strong></li>
+                    <li>Current Dataset: <strong>{fileName || "-"}</strong></li>
+                  </ul>
+                </div>
+
+                <div className="mini-panel">
+                  <h3>Recent Queries</h3>
+                  <ul>
+                    {userHistory.length ? (
+                      userHistory.slice(0, 5).map((item, index) => (
+                        <li key={`${item.query}-${index}`}>
+                          <strong>{item.query}</strong><br />
+                          <span style={{ color: "#c7d2fe" }}>{item.time}</span><br />
+                          <span>{item.result}</span>
+                        </li>
+                      ))
+                    ) : (
+                      <li>No analysis history yet.</li>
+                    )}
+                  </ul>
+                </div>
+              </div>
+            </section>
+          )}
 
           {hasUploaded && hasAnalyzed && chartData.length > 0 && (
             <section className="panel chart-panel">
