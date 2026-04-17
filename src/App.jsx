@@ -342,7 +342,8 @@ if (chartType === "lowest") {
     monthHeader,
   ]);
 
-  const visibleRows = filteredRows.slice(0, rowsPerPage);
+   const effectiveRowsPerPage = Math.min(rowsPerPage, filteredRows.length || rowsPerPage);
+const visibleRows = filteredRows.slice(0, effectiveRowsPerPage);
 
   const maxChartValue = Math.max(
     ...chartData.map((item) => (typeof item.value === "number" ? item.value : 0)),
@@ -1976,16 +1977,16 @@ if (chartType === "lowest") {
                     onChange={(e) => setTableSearch(e.target.value)}
                   />
 
-                  <select
-                    className="rows-select"
-                    value={rowsPerPage}
-                    onChange={(e) => setRowsPerPage(Number(e.target.value))}
-                  >
-                    <option value={5}>5 rows</option>
-                    <option value={8}>8 rows</option>
-                    <option value={10}>10 rows</option>
-                    <option value={15}>15 rows</option>
-                  </select>
+                <select
+  className="rows-select"
+  value={effectiveRowsPerPage}
+  onChange={(e) => setRowsPerPage(Number(e.target.value))}
+>
+  <option value={5}>5 rows</option>
+  <option value={8}>8 rows</option>
+  <option value={10}>10 rows</option>
+  <option value={15}>15 rows</option>
+</select>
                 </div>
               </div>
 
