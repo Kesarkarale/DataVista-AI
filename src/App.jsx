@@ -1506,10 +1506,25 @@ if (chartType === "lowest") {
           gap: 12px;
           flex-wrap: wrap;
         }
-
+        
         .rows-select {
-          width: 120px;
-        }
+  width: 120px;
+  background: rgba(255,255,255,.06);
+  color: white;
+  border: 1px solid rgba(145,157,215,.2);
+  border-radius: 18px;
+  padding: 0 16px;
+  height: 56px;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+.rows-select option {
+  background: #0f1b45;
+  color: white;
+}
 
         .table-wrap {
           overflow-x: auto;
