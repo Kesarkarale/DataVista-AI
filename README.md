@@ -71,6 +71,9 @@ Monitor,9000,Jul,North
 
 Login Page
 ![Login Page](LoginPage.png)
+
+SignUp Page
+![SignUp Page](SignPage.png)
   
 Dashboard Overview
 ![Dashboard Overview](DashboardOverview.png)
