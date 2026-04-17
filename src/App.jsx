@@ -143,6 +143,7 @@ export default function App() {
 
   const [tableSearch, setTableSearch] = useState("");
   const [rowsPerPage, setRowsPerPage] = useState(8);
+  const [currentPage, setCurrentPage] = useState(1);
   const [chartType, setChartType] = useState("top");
   const [animateChart, setAnimateChart] = useState(false);
 
@@ -347,7 +348,16 @@ export default function App() {
     filteredRows.length || rowsPerPage
   );
 
-  const visibleRows = filteredRows.slice(0, effectiveRowsPerPage);
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredRows.length / effectiveRowsPerPage)
+  );
+
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const startIndex = (safeCurrentPage - 1) * effectiveRowsPerPage;
+  const endIndex = startIndex + effectiveRowsPerPage;
+
+  const visibleRows = filteredRows.slice(startIndex, endIndex);
 
   const maxChartValue = Math.max(
     ...chartData.map((item) => (typeof item.value === "number" ? item.value : 0)),
@@ -383,6 +393,10 @@ export default function App() {
     const timer = setTimeout(() => setAnimateChart(true), 120);
     return () => clearTimeout(timer);
   }, [chartData, chartType]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [tableSearch, activeQuery, rowsPerPage, hasAnalyzed, csvText]);
 
   const handleSignup = (e) => {
     e.preventDefault();
@@ -487,6 +501,7 @@ export default function App() {
       setTableSearch("");
       setRecentQueries([]);
       setRowsPerPage(8);
+      setCurrentPage(1);
       setChartType("top");
 
       setResultText("Dataset uploaded successfully.");
@@ -560,6 +575,7 @@ export default function App() {
       setHasAnalyzed(true);
       setActiveQuery(q);
       setTableSearch("");
+      setCurrentPage(1);
 
       setResultText(response);
       setInsightText(autoInsight);
@@ -586,6 +602,7 @@ export default function App() {
     setTableSearch("");
     setRecentQueries([]);
     setRowsPerPage(8);
+    setCurrentPage(1);
     setChartType("top");
 
     setResultText("Upload your CSV and ask a question to generate smart insights.");
@@ -1980,7 +1997,10 @@ export default function App() {
                   <select
                     className="rows-select"
                     value={effectiveRowsPerPage}
-                    onChange={(e) => setRowsPerPage(Number(e.target.value))}
+                    onChange={(e) => {
+                      setRowsPerPage(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
                   >
                     <option value={5}>5 rows</option>
                     <option value={8}>8 rows</option>
@@ -2019,6 +2039,49 @@ export default function App() {
                     )}
                   </tbody>
                 </table>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: "12px",
+                  marginTop: "18px",
+                  flexWrap: "wrap",
+                }}
+              >
+                <div style={{ color: "#cbd5e1", fontSize: "15px" }}>
+                  Page {safeCurrentPage} of {totalPages}
+                </div>
+
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <button
+                    className="btn"
+                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                    disabled={safeCurrentPage === 1}
+                    style={{
+                      background: "linear-gradient(135deg, #334155, #1e293b)",
+                      padding: "12px 18px",
+                    }}
+                  >
+                    Prev
+                  </button>
+
+                  <button
+                    className="btn"
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                    }
+                    disabled={safeCurrentPage === totalPages}
+                    style={{
+                      background: "linear-gradient(135deg, #6d5dfc, #8b5cf6)",
+                      padding: "12px 18px",
+                    }}
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             </section>
           )}
