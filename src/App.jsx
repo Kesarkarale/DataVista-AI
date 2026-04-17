@@ -1348,7 +1348,7 @@ export default function App() {
 
   return (
     <>
- <style>{`
+<style>{`
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body, #root { min-height: 100%; }
   body {
@@ -1363,7 +1363,7 @@ export default function App() {
   .app {
     min-height: 100vh;
     padding: 28px 18px 60px;
-    animation: appEnter 1.1s cubic-bezier(.22,1,.36,1);
+    animation: appEnter .85s cubic-bezier(.22,1,.36,1);
   }
 
   .container {
@@ -1377,20 +1377,19 @@ export default function App() {
     border: 1px solid rgba(102, 126, 234, 0.22);
     border-radius: 30px;
     box-shadow: 0 14px 40px rgba(0,0,0,0.22);
-    transition: transform 0.34s ease, box-shadow 0.34s ease, border-color 0.34s ease;
-    animation: panelPop 1s cubic-bezier(.22,1,.36,1);
+    transition: transform 0.28s ease, box-shadow 0.28s ease, border-color 0.28s ease;
   }
 
   .panel:hover {
-    transform: translateY(-8px) scale(1.01);
-    box-shadow: 0 28px 62px rgba(0,0,0,0.34);
-    border-color: rgba(129, 140, 248, 0.34);
+    transform: translateY(-4px);
+    box-shadow: 0 24px 54px rgba(0,0,0,0.28);
+    border-color: rgba(129, 140, 248, 0.28);
   }
 
   .hero {
     padding: 34px 34px 30px;
     margin-bottom: 24px;
-    animation: fadeSlideUp 0.85s ease;
+    animation: fadeSlideUp .75s ease;
   }
 
   .hero-header {
@@ -1418,7 +1417,7 @@ export default function App() {
     background: linear-gradient(135deg, #7c4dff, #ff4da6);
     box-shadow: 0 12px 30px rgba(124, 77, 255, 0.35);
     font-size: 28px;
-    animation: floatStrong 2.1s ease-in-out infinite;
+    animation: floatGlow 3s ease-in-out infinite;
   }
 
   .hero-title h1 {
@@ -1426,7 +1425,7 @@ export default function App() {
     line-height: 1;
     font-weight: 800;
     letter-spacing: -1.2px;
-    animation: fadeSlideUp .95s ease;
+    animation: fadeSlideUp .8s ease;
   }
 
   .hero-title p {
@@ -1434,7 +1433,7 @@ export default function App() {
     font-size: 17px;
     color: #c7d2fe;
     max-width: 780px;
-    animation: fadeSlideUp 1.1s ease;
+    animation: fadeSlideUp .95s ease;
   }
 
   .logout-btn {
@@ -1446,17 +1445,17 @@ export default function App() {
     font-size: 15px;
     font-weight: 800;
     cursor: pointer;
-    transition: transform 0.28s ease, box-shadow 0.28s ease, filter 0.28s ease;
+    transition: transform 0.24s ease, box-shadow 0.24s ease, filter 0.24s ease;
   }
 
   .logout-btn:hover {
-    transform: translateY(-5px) scale(1.04);
-    box-shadow: 0 18px 38px rgba(239, 68, 68, 0.34);
-    filter: brightness(1.05);
+    transform: translateY(-3px) scale(1.01);
+    box-shadow: 0 16px 34px rgba(239, 68, 68, 0.28);
+    filter: brightness(1.03);
   }
 
   .logout-btn:active {
-    transform: scale(0.94);
+    transform: scale(0.97);
   }
 
   .hero-grid {
@@ -1471,7 +1470,7 @@ export default function App() {
     border: 1px solid rgba(122, 142, 255, 0.22);
     background: linear-gradient(135deg, rgba(56,47,120,.45), rgba(17,31,78,.45));
     min-height: 190px;
-    animation: fadeSlideUp 0.95s ease;
+    animation: fadeSlideUp .85s ease;
   }
 
   .upload-inner {
@@ -1484,20 +1483,20 @@ export default function App() {
     border-radius: 20px;
     padding: 22px;
     cursor: pointer;
-    transition: transform .32s ease, border-color .32s ease, box-shadow .32s ease, background .32s ease;
+    transition: transform .28s ease, border-color .28s ease, box-shadow .28s ease, background .28s ease;
   }
 
   .upload-inner:hover {
-    transform: translateY(-6px) scale(1.03);
-    border-color: rgba(167,139,250,.62);
-    box-shadow: 0 0 0 8px rgba(99,102,241,.10);
-    background: rgba(255,255,255,.03);
+    transform: translateY(-3px) scale(1.01);
+    border-color: rgba(167,139,250,.55);
+    box-shadow: 0 0 0 6px rgba(99,102,241,.08);
+    background: rgba(255,255,255,.02);
   }
 
   .upload-icon {
     font-size: 28px;
     margin-bottom: 12px;
-    animation: floatStrong 2.4s ease-in-out infinite;
+    animation: floatSoft 2.8s ease-in-out infinite;
   }
 
   .upload-inner h3 {
@@ -1548,7 +1547,7 @@ export default function App() {
     color: #d1fae5;
     font-weight: 700;
     font-size: 18px;
-    animation: fadeSlideUp 1s ease;
+    animation: fadeSlideUp .9s ease;
   }
 
   .dataset-pill.empty {
@@ -1566,7 +1565,7 @@ export default function App() {
     border: 1px solid rgba(239, 68, 68, 0.35);
     color: #fecaca;
     font-weight: 600;
-    animation: fadeSlideUp .45s ease;
+    animation: fadeSlideUp .35s ease;
   }
 
   .dot {
@@ -1575,7 +1574,7 @@ export default function App() {
     border-radius: 50%;
     background: #22c55e;
     box-shadow: 0 0 10px #22c55e;
-    animation: pulseDot 1.2s ease-in-out infinite;
+    animation: pulseDot 1.8s ease-in-out infinite;
   }
 
   .button-row {
@@ -1593,7 +1592,7 @@ export default function App() {
     font-weight: 700;
     cursor: pointer;
     color: white;
-    transition: transform .28s ease, box-shadow .28s ease, filter .28s ease;
+    transition: transform .24s ease, box-shadow .24s ease, filter .24s ease;
     position: relative;
     overflow: hidden;
   }
@@ -1602,23 +1601,23 @@ export default function App() {
     content: "";
     position: absolute;
     inset: 0;
-    background: linear-gradient(120deg, transparent, rgba(255,255,255,0.24), transparent);
-    transform: translateX(-130%);
-    transition: transform 0.7s ease;
+    background: linear-gradient(120deg, transparent, rgba(255,255,255,0.18), transparent);
+    transform: translateX(-120%);
+    transition: transform 0.6s ease;
   }
 
   .btn:hover {
-    transform: translateY(-6px) scale(1.04);
-    box-shadow: 0 20px 42px rgba(0,0,0,.26);
-    filter: brightness(1.05);
+    transform: translateY(-3px) scale(1.01);
+    box-shadow: 0 15px 35px rgba(0,0,0,.22);
+    filter: brightness(1.03);
   }
 
   .btn:hover::after {
-    transform: translateX(130%);
+    transform: translateX(120%);
   }
 
   .btn:active {
-    transform: scale(0.93);
+    transform: scale(0.97);
   }
 
   .btn:disabled {
@@ -1652,7 +1651,7 @@ export default function App() {
   .summary, .ask-panel, .chart-panel, .table-panel {
     padding: 28px;
     margin-bottom: 22px;
-    animation: riseUp .9s ease;
+    animation: riseUp .7s ease;
   }
 
   .section-title {
@@ -1679,14 +1678,14 @@ export default function App() {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    animation: statPop .95s cubic-bezier(.22,1,.36,1);
-    transition: transform .28s ease, box-shadow .28s ease, border-color .28s ease;
+    animation: popIn .6s ease;
+    transition: transform .24s ease, box-shadow .24s ease, border-color .24s ease;
   }
 
   .stat-card:hover {
-    transform: translateY(-8px) scale(1.04);
-    box-shadow: 0 20px 40px rgba(0,0,0,.24);
-    border-color: rgba(129,140,248,.38);
+    transform: translateY(-4px) scale(1.01);
+    box-shadow: 0 16px 34px rgba(0,0,0,.22);
+    border-color: rgba(129,140,248,.34);
   }
 
   .stat-card h4 {
@@ -1714,12 +1713,12 @@ export default function App() {
     border: 1px solid rgba(111,133,221,.22);
     padding: 22px;
     min-height: 170px;
-    transition: transform .28s ease, box-shadow .28s ease;
+    transition: transform .24s ease, box-shadow .24s ease;
   }
 
   .mini-panel:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 16px 32px rgba(0,0,0,.20);
+    transform: translateY(-3px);
+    box-shadow: 0 14px 28px rgba(0,0,0,.18);
   }
 
   .mini-panel h3 {
@@ -1741,12 +1740,12 @@ export default function App() {
     border-radius: 14px;
     padding: 12px 14px;
     line-height: 1.55;
-    transition: transform .24s ease, background .24s ease;
+    transition: transform .22s ease, background .22s ease;
   }
 
   .mini-panel li:hover {
-    transform: translateX(6px);
-    background: rgba(255,255,255,.06);
+    transform: translateX(4px);
+    background: rgba(255,255,255,.05);
   }
 
   .ask-title {
@@ -1777,7 +1776,7 @@ export default function App() {
     padding: 0 20px;
     font-size: 16px;
     outline: none;
-    transition: transform .24s ease, border-color .24s ease, box-shadow .24s ease, background .24s ease;
+    transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease, background .22s ease;
   }
 
   .rows-input {
@@ -1793,9 +1792,9 @@ export default function App() {
   }
 
   .query-input:focus, .table-search:focus, .rows-select:focus, .filter-select:focus, .rows-input:focus {
-    transform: scale(1.04);
-    border-color: rgba(129,140,248,.62);
-    box-shadow: 0 0 0 5px rgba(99,102,241,.14);
+    transform: scale(1.015);
+    border-color: rgba(129,140,248,.55);
+    box-shadow: 0 0 0 4px rgba(99,102,241,.10);
   }
 
   .filter-select option, .rows-select option {
@@ -1824,13 +1823,13 @@ export default function App() {
     padding: 11px 16px;
     cursor: pointer;
     font-size: 15px;
-    transition: transform .26s ease, background .26s ease, box-shadow .26s ease;
+    transition: transform .24s ease, background .24s ease, box-shadow .24s ease;
   }
 
   .chip:hover {
-    transform: translateY(-4px) scale(1.03);
-    background: rgba(94,110,218,.18);
-    box-shadow: 0 10px 18px rgba(0,0,0,.14);
+    transform: translateY(-2px) scale(1.01);
+    background: rgba(94,110,218,.16);
+    box-shadow: 0 8px 16px rgba(0,0,0,.12);
   }
 
   .info-box {
@@ -1844,7 +1843,7 @@ export default function App() {
     color: #d7e3ff;
     font-size: 18px;
     line-height: 1.55;
-    animation: fadeSlideUp .75s ease;
+    animation: fadeSlideUp .65s ease;
   }
 
   .result-card {
@@ -1855,7 +1854,7 @@ export default function App() {
     background: linear-gradient(180deg, rgba(16,185,129,.12), rgba(59,130,246,.10));
     border: 1px solid rgba(99,102,241,.25);
     text-align: center;
-    animation: resultReveal .6s ease;
+    animation: resultReveal .45s ease;
   }
 
   .result-card h3 {
@@ -1886,12 +1885,12 @@ export default function App() {
     background: rgba(255,255,255,.06);
     border: 1px solid rgba(255,255,255,.08);
     color: #e5e7eb;
-    transition: transform .24s ease, background .24s ease;
+    transition: transform .22s ease, background .22s ease;
   }
 
   .recent-pill:hover {
-    transform: translateY(-3px);
-    background: rgba(255,255,255,.12);
+    transform: translateY(-2px);
+    background: rgba(255,255,255,.10);
   }
 
   .small-meta {
@@ -1912,7 +1911,7 @@ export default function App() {
     border: 1px solid rgba(129, 140, 248, 0.35);
     font-weight: 700;
     letter-spacing: .4px;
-    animation: pulseStrong 0.85s infinite;
+    animation: pulse 1.2s infinite;
   }
 
   .typing {
@@ -1949,7 +1948,7 @@ export default function App() {
     margin: 10px 0 8px;
     color: #e7ebff;
     font-size: 18px;
-    animation: fadeSlideUp .65s ease;
+    animation: fadeSlideUp .55s ease;
   }
 
   .legend-box {
@@ -2016,14 +2015,14 @@ export default function App() {
     border-radius: 16px 16px 0 0;
     background: linear-gradient(180deg, #7068f3, #5b61e8);
     box-shadow: 0 14px 30px rgba(92,97,232,.25);
-    transition: height 1.4s cubic-bezier(.22,1,.36,1), transform .24s ease, filter .24s ease;
+    transition: height 1.2s cubic-bezier(.22,1,.36,1), transform .22s ease, filter .22s ease;
     position: relative;
     z-index: 2;
   }
 
   .bar:hover {
-    transform: scaleY(1.05);
-    filter: brightness(1.08);
+    transform: scaleY(1.02);
+    filter: brightness(1.05);
   }
 
   .bar-label-x {
@@ -2065,11 +2064,11 @@ export default function App() {
     border-radius: 999px;
     background: linear-gradient(180deg, #60a5fa, #8b5cf6);
     box-shadow: 0 8px 18px rgba(96,165,250,.25);
-    transition: height .9s ease, transform .24s ease;
+    transition: height .9s ease, transform .22s ease;
   }
 
   .line-stick:hover {
-    transform: scaleY(1.06);
+    transform: scaleY(1.03);
   }
 
   .line-value {
@@ -2103,7 +2102,7 @@ export default function App() {
     box-shadow: inset 0 0 0 16px rgba(10,16,34,.9);
     position: relative;
     overflow: hidden;
-    animation: statPop .8s ease;
+    animation: popIn .65s ease;
   }
 
   .pie-hole {
@@ -2143,12 +2142,12 @@ export default function App() {
     border-radius: 14px;
     background: rgba(255,255,255,.04);
     border: 1px solid rgba(255,255,255,.06);
-    transition: transform .24s ease, background .24s ease;
+    transition: transform .22s ease, background .22s ease;
   }
 
   .pie-item:hover {
-    transform: translateX(6px) scale(1.01);
-    background: rgba(255,255,255,.07);
+    transform: translateX(4px);
+    background: rgba(255,255,255,.06);
   }
 
   .pie-left {
@@ -2208,7 +2207,7 @@ export default function App() {
     margin-bottom: 14px;
     color: #cbd5e1;
     font-size: 15px;
-    animation: fadeSlideUp .65s ease;
+    animation: fadeSlideUp .5s ease;
   }
 
   .table-wrap {
@@ -2227,7 +2226,7 @@ export default function App() {
     text-align: left;
     border-bottom: 1px solid rgba(255,255,255,.07);
     font-size: 15px;
-    transition: background .24s ease, transform .24s ease;
+    transition: background .22s ease, transform .22s ease;
   }
 
   th {
@@ -2240,7 +2239,7 @@ export default function App() {
   }
 
   th:hover {
-    background: rgba(255,255,255,.06);
+    background: rgba(255,255,255,.05);
   }
 
   td {
@@ -2248,8 +2247,8 @@ export default function App() {
   }
 
   tr:hover td {
-    background: rgba(124,77,255,0.15);
-    transform: scale(1.01);
+    background: rgba(124,77,255,0.10);
+    transform: scale(1.005);
   }
 
   .sort-icon {
@@ -2283,18 +2282,18 @@ export default function App() {
     color: white;
     cursor: pointer;
     font-weight: 700;
-    transition: transform .24s ease, background .24s ease, box-shadow .24s ease;
+    transition: transform .22s ease, background .22s ease, box-shadow .22s ease;
   }
 
   .page-number:hover {
-    transform: translateY(-3px) scale(1.04);
-    background: rgba(255,255,255,.10);
+    transform: translateY(-2px);
+    background: rgba(255,255,255,.08);
   }
 
   .page-number.active {
     background: linear-gradient(135deg, #6d5dfc, #8b5cf6);
     border-color: transparent;
-    box-shadow: 0 12px 22px rgba(109, 93, 252, 0.3);
+    box-shadow: 0 10px 18px rgba(109, 93, 252, 0.25);
   }
 
   .page-number.dots {
@@ -2303,53 +2302,53 @@ export default function App() {
   }
 
   @keyframes appEnter {
-    from { opacity: 0; transform: translateY(50px) scale(0.92); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
-  }
-
-  @keyframes panelPop {
-    from { opacity: 0; transform: translateY(60px) scale(0.9); }
+    from { opacity: 0; transform: translateY(20px) scale(0.98); }
     to { opacity: 1; transform: translateY(0) scale(1); }
   }
 
   @keyframes fadeSlideUp {
-    from { opacity: 0; transform: translateY(20px); }
+    from { opacity: 0; transform: translateY(14px); }
     to { opacity: 1; transform: translateY(0); }
   }
 
   @keyframes riseUp {
-    from { opacity: 0; transform: translateY(24px); }
+    from { opacity: 0; transform: translateY(16px); }
     to { opacity: 1; transform: translateY(0); }
   }
 
   @keyframes bounce {
     0%, 80%, 100% { transform: translateY(0); opacity: .7; }
-    40% { transform: translateY(-8px); opacity: 1; }
+    40% { transform: translateY(-6px); opacity: 1; }
   }
 
-  @keyframes pulseStrong {
-    0% { opacity: 0.5; transform: scale(0.96); }
-    50% { opacity: 1; transform: scale(1.05); }
-    100% { opacity: 0.5; transform: scale(0.96); }
+  @keyframes pulse {
+    0% { opacity: 0.65; }
+    50% { opacity: 1; }
+    100% { opacity: 0.65; }
   }
 
-  @keyframes statPop {
-    from { opacity: 0; transform: scale(0.75) translateY(40px); }
-    to { opacity: 1; transform: scale(1) translateY(0); }
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.92); }
+    to { opacity: 1; transform: scale(1); }
   }
 
   @keyframes pulseDot {
     0%, 100% { transform: scale(1); opacity: 0.9; }
-    50% { transform: scale(1.35); opacity: 1; }
+    50% { transform: scale(1.2); opacity: 1; }
   }
 
-  @keyframes floatStrong {
-    0%,100% { transform: translateY(0) scale(1); }
-    50% { transform: translateY(-12px) scale(1.08); }
+  @keyframes floatGlow {
+    0%, 100% { transform: translateY(0); box-shadow: 0 12px 30px rgba(124, 77, 255, 0.35); }
+    50% { transform: translateY(-4px); box-shadow: 0 18px 36px rgba(124, 77, 255, 0.45); }
+  }
+
+  @keyframes floatSoft {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
   }
 
   @keyframes resultReveal {
-    from { opacity: 0; transform: scale(0.92) translateY(18px); }
+    from { opacity: 0; transform: scale(0.96) translateY(10px); }
     to { opacity: 1; transform: scale(1) translateY(0); }
   }
 
