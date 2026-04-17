@@ -211,36 +211,36 @@ export default function App() {
       return [];
     }
 
-   if (chartType === "top") {
-  return sortedBySales.slice(0, rowsPerPage).map((item) => ({
-    name: String(item[productHeader]),
-    value: item[salesHeader],
-  }));
-}
+    if (chartType === "top") {
+      return sortedBySales.slice(0, rowsPerPage).map((item) => ({
+        name: String(item[productHeader]),
+        value: item[salesHeader],
+      }));
+    }
 
-if (chartType === "lowest") {
-  return [...sortedBySales]
-    .slice(-rowsPerPage)
-    .reverse()
-    .map((item) => ({
-      name: String(item[productHeader]),
-      value: item[salesHeader],
-    }));
-}
+    if (chartType === "lowest") {
+      return [...sortedBySales]
+        .slice(-rowsPerPage)
+        .reverse()
+        .map((item) => ({
+          name: String(item[productHeader]),
+          value: item[salesHeader],
+        }));
+    }
 
     if (chartType === "average") {
-     return rows.slice(0, rowsPerPage).map((row) => ({
-     name: String(row[productHeader]),
-     value: averageSales,
-     }));
-   }
+      return rows.slice(0, rowsPerPage).map((row) => ({
+        name: String(row[productHeader]),
+        value: averageSales,
+      }));
+    }
 
     if (chartType === "total") {
-    return rows.slice(0, rowsPerPage).map((row) => ({
-    name: String(row[productHeader]),
-    value: totalSales,
-    }));
-   }
+      return rows.slice(0, rowsPerPage).map((row) => ({
+        name: String(row[productHeader]),
+        value: totalSales,
+      }));
+    }
 
     if (chartType === "region") {
       return regionData;
@@ -342,8 +342,12 @@ if (chartType === "lowest") {
     monthHeader,
   ]);
 
-   const effectiveRowsPerPage = Math.min(rowsPerPage, filteredRows.length || rowsPerPage);
-const visibleRows = filteredRows.slice(0, effectiveRowsPerPage);
+  const effectiveRowsPerPage = Math.min(
+    rowsPerPage,
+    filteredRows.length || rowsPerPage
+  );
+
+  const visibleRows = filteredRows.slice(0, effectiveRowsPerPage);
 
   const maxChartValue = Math.max(
     ...chartData.map((item) => (typeof item.value === "number" ? item.value : 0)),
@@ -380,82 +384,78 @@ const visibleRows = filteredRows.slice(0, effectiveRowsPerPage);
     return () => clearTimeout(timer);
   }, [chartData, chartType]);
 
- const handleSignup = (e) => {
-  e.preventDefault();
+  const handleSignup = (e) => {
+    e.preventDefault();
 
-  const cleanName = name.trim();
-  const cleanEmail = email.trim().toLowerCase();
-  const cleanPassword = password.trim();
+    const cleanName = name.trim();
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPassword = password.trim();
 
-  if (!cleanName || !cleanEmail || !cleanPassword) {
-    setAuthMessage("Please fill all fields.");
-    setAuthMessageType("error");
-    return;
-  }
+    if (!cleanName || !cleanEmail || !cleanPassword) {
+      setAuthMessage("Please fill all fields.");
+      setAuthMessageType("error");
+      return;
+    }
 
-  const exists = users.find((u) => u.email === cleanEmail);
-  if (exists) {
-    setAuthMessage("Account already exists with this email.");
-    setAuthMessageType("error");
-    return;
-  }
+    const exists = users.find((u) => u.email === cleanEmail);
+    if (exists) {
+      setAuthMessage("Account already exists with this email.");
+      setAuthMessageType("error");
+      return;
+    }
 
-  const newUser = {
-    name: cleanName,
-    email: cleanEmail,
-    password: cleanPassword,
+    const newUser = {
+      name: cleanName,
+      email: cleanEmail,
+      password: cleanPassword,
+    };
+
+    const updatedUsers = [...users, newUser];
+    setUsers(updatedUsers);
+    localStorage.setItem("datavista_users", JSON.stringify(updatedUsers));
+
+    setAuthMessage("Account created successfully. Please login.");
+    setAuthMessageType("success");
+
+    setName("");
+    setEmail(cleanEmail);
+    setPassword("");
+    setIsSignup(false);
   };
 
-  const updatedUsers = [...users, newUser];
-  setUsers(updatedUsers);
-  localStorage.setItem("datavista_users", JSON.stringify(updatedUsers));
+  const handleLogin = (e) => {
+    e.preventDefault();
 
-  // success message
-  setAuthMessage("Account created successfully. Please login.");
-  setAuthMessageType("success");
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPassword = password.trim();
 
-  // signup fields clear
-  setName("");
-  setEmail(cleanEmail);
-  setPassword("");
+    if (!cleanEmail || !cleanPassword) {
+      setAuthMessage("Please enter email and password.");
+      setAuthMessageType("error");
+      return;
+    }
 
-  // back to login page
-  setIsSignup(false);
-};
+    const user = users.find(
+      (u) => u.email === cleanEmail && u.password === cleanPassword
+    );
 
- const handleLogin = (e) => {
-  e.preventDefault();
+    if (!user) {
+      setAuthMessage("Invalid email or password.");
+      setAuthMessageType("error");
+      return;
+    }
 
-  const cleanEmail = email.trim().toLowerCase();
-  const cleanPassword = password.trim();
+    setAuthMessage("");
+    setAuthMessageType("");
 
-  if (!cleanEmail || !cleanPassword) {
-    setAuthMessage("Please enter email and password.");
-    setAuthMessageType("error");
-    return;
-  }
+    setName(user.name || "");
+    setLoggedIn(true);
+    setPassword("");
 
-  const user = users.find(
-    (u) => u.email === cleanEmail && u.password === cleanPassword
-  );
+    localStorage.setItem("datavista_current_user", user.name);
+    setCurrentUser(user.name);
+  };
 
-  if (!user) {
-    setAuthMessage("Invalid email or password.");
-    setAuthMessageType("error");
-    return;
-  }
-
-  setAuthMessage("");
-  setAuthMessageType("");
-
-  setName(user.name || "");
-  setLoggedIn(true);
-  setPassword("");
-
-  localStorage.setItem("datavista_current_user", user.name);
-  setCurrentUser(user.name);
-};
-  
   const handleLogout = () => {
     setLoggedIn(false);
     setEmail("");
@@ -1511,23 +1511,23 @@ const visibleRows = filteredRows.slice(0, effectiveRowsPerPage);
         }
         
         .rows-select {
-  width: 120px;
-  background: rgba(255,255,255,.06);
-  color: white;
-  border: 1px solid rgba(145,157,215,.2);
-  border-radius: 18px;
-  padding: 0 16px;
-  height: 56px;
-  outline: none;
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-}
+          width: 120px;
+          background: rgba(255,255,255,.06);
+          color: white;
+          border: 1px solid rgba(145,157,215,.2);
+          border-radius: 18px;
+          padding: 0 16px;
+          height: 56px;
+          outline: none;
+          appearance: none;
+          -webkit-appearance: none;
+          -moz-appearance: none;
+        }
 
-.rows-select option {
-  background: #0f1b45;
-  color: white;
-}
+        .rows-select option {
+          background: #0f1b45;
+          color: white;
+        }
 
         .table-wrap {
           overflow-x: auto;
@@ -1977,16 +1977,16 @@ const visibleRows = filteredRows.slice(0, effectiveRowsPerPage);
                     onChange={(e) => setTableSearch(e.target.value)}
                   />
 
-                <select
-  className="rows-select"
-  value={effectiveRowsPerPage}
-  onChange={(e) => setRowsPerPage(Number(e.target.value))}
->
-  <option value={5}>5 rows</option>
-  <option value={8}>8 rows</option>
-  <option value={10}>10 rows</option>
-  <option value={15}>15 rows</option>
-</select>
+                  <select
+                    className="rows-select"
+                    value={effectiveRowsPerPage}
+                    onChange={(e) => setRowsPerPage(Number(e.target.value))}
+                  >
+                    <option value={5}>5 rows</option>
+                    <option value={8}>8 rows</option>
+                    <option value={10}>10 rows</option>
+                    <option value={15}>15 rows</option>
+                  </select>
                 </div>
               </div>
 
