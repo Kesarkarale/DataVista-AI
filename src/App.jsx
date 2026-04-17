@@ -1,5 +1,4 @@
-  import { useEffect, useMemo, useRef, useState } from "react";
-import html2canvas from "html2canvas";
+import { useEffect, useMemo, useState } from "react";
 
 function parseCSV(text) {
   const lines = text
@@ -43,22 +42,6 @@ function downloadCsv(filename, content) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-}
-
-function rowsToCsv(headers, rows) {
-  const csvRows = [
-    headers.join(","),
-    ...rows.map((row) =>
-      headers
-        .map((header) => {
-          const value = row[header] ?? "";
-          const safe = String(value).replace(/"/g, '""');
-          return `"${safe}"`;
-        })
-        .join(",")
-    ),
-  ];
-  return csvRows.join("\n");
 }
 
 function getInsightText({
@@ -117,16 +100,7 @@ function getInsightText({
   return "Analysis generated successfully.";
 }
 
-function getBarColor(value, max) {
-  const ratio = max ? value / max : 0;
-  if (ratio > 0.75) return "linear-gradient(180deg, #22c55e, #16a34a)";
-  if (ratio > 0.45) return "linear-gradient(180deg, #7068f3, #5b61e8)";
-  return "linear-gradient(180deg, #f59e0b, #ea580c)";
-}
-
 export default function App() {
-  const chartRef = useRef(null);
-
   const [loggedIn, setLoggedIn] = useState(false);
   const [isSignup, setIsSignup] = useState(false);
 
@@ -145,19 +119,6 @@ export default function App() {
 
   const [currentUser, setCurrentUser] = useState(() => {
     return localStorage.getItem("datavista_current_user") || "";
-  });
-
-  const [theme, setTheme] = useState(() => {
-    return localStorage.getItem("datavista_theme") || "dark";
-  });
-
-  const [savedQueries, setSavedQueries] = useState(() => {
-    try {
-      const saved = localStorage.getItem("datavista_saved_queries");
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
   });
 
   const [authMessage, setAuthMessage] = useState("");
@@ -185,16 +146,6 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState(1);
   const [chartType, setChartType] = useState("top");
   const [animateChart, setAnimateChart] = useState(false);
-
-  const [selectedRegion, setSelectedRegion] = useState("all");
-  const [selectedMonth, setSelectedMonth] = useState("all");
-  const [minSalesFilter, setMinSalesFilter] = useState("");
-  const [maxSalesFilter, setMaxSalesFilter] = useState("");
-
-  const [sortConfig, setSortConfig] = useState({
-    key: "",
-    direction: "asc",
-  });
 
   const { headers, rows } = useMemo(() => parseCSV(csvText), [csvText]);
 
@@ -227,16 +178,6 @@ export default function App() {
     return new Set(rows.map((row) => row[regionHeader])).size;
   }, [rows, regionHeader]);
 
-  const regionOptions = useMemo(() => {
-    if (!regionHeader) return [];
-    return [...new Set(rows.map((row) => row[regionHeader]).filter(Boolean))];
-  }, [rows, regionHeader]);
-
-  const monthOptions = useMemo(() => {
-    if (!monthHeader) return [];
-    return [...new Set(rows.map((row) => row[monthHeader]).filter(Boolean))];
-  }, [rows, monthHeader]);
-
   const sortedBySales = useMemo(() => {
     if (!salesHeader) return [];
     return [...rows]
@@ -246,12 +187,6 @@ export default function App() {
 
   const topProduct = sortedBySales[0];
   const lowestProduct = sortedBySales[sortedBySales.length - 1];
-
-  const growthPercentage = useMemo(() => {
-    if (!sortedBySales.length || !averageSales) return 0;
-    const highest = topProduct?.[salesHeader] || 0;
-    return ((highest - averageSales) / averageSales) * 100;
-  }, [sortedBySales, averageSales, topProduct, salesHeader]);
 
   const regionData = useMemo(() => {
     if (!regionHeader || !salesHeader) return [];
@@ -266,13 +201,10 @@ export default function App() {
 
   const monthData = useMemo(() => {
     if (!monthHeader || !salesHeader) return [];
-    const map = {};
-    rows.forEach((row) => {
-      const month = String(row[monthHeader]);
-      const sales = typeof row[salesHeader] === "number" ? row[salesHeader] : 0;
-      map[month] = (map[month] || 0) + sales;
-    });
-    return Object.entries(map).map(([name, value]) => ({ name, value }));
+    return rows.map((row) => ({
+      name: String(row[monthHeader]),
+      value: typeof row[salesHeader] === "number" ? row[salesHeader] : 0,
+    }));
   }, [rows, monthHeader, salesHeader]);
 
   const chartData = useMemo(() => {
@@ -335,10 +267,19 @@ export default function App() {
     rowsPerPage,
   ]);
 
-  const baseFilteredRows = useMemo(() => {
+  const filteredRows = useMemo(() => {
     if (!rows.length) return [];
 
     const q = activeQuery.trim().toLowerCase();
+    const ts = tableSearch.trim().toLowerCase();
+
+    if (ts) {
+      return rows.filter((row) =>
+        headers.some((header) =>
+          String(row[header] ?? "").toLowerCase().includes(ts)
+        )
+      );
+    }
 
     if (!hasAnalyzed) {
       return rows;
@@ -387,7 +328,9 @@ export default function App() {
     return rows;
   }, [
     rows,
+    headers,
     activeQuery,
+    tableSearch,
     hasAnalyzed,
     sortedBySales,
     averageSales,
@@ -398,71 +341,6 @@ export default function App() {
     productHeader,
     regionHeader,
     monthHeader,
-  ]);
-
-  const filteredRows = useMemo(() => {
-    let data = [...baseFilteredRows];
-
-    const ts = tableSearch.trim().toLowerCase();
-
-    if (ts) {
-      data = data.filter((row) =>
-        headers.some((header) =>
-          String(row[header] ?? "").toLowerCase().includes(ts)
-        )
-      );
-    }
-
-    if (selectedRegion !== "all" && regionHeader) {
-      data = data.filter((row) => String(row[regionHeader]) === selectedRegion);
-    }
-
-    if (selectedMonth !== "all" && monthHeader) {
-      data = data.filter((row) => String(row[monthHeader]) === selectedMonth);
-    }
-
-    if (salesHeader && minSalesFilter !== "") {
-      data = data.filter((row) => {
-        const value = Number(row[salesHeader]);
-        return !Number.isNaN(value) && value >= Number(minSalesFilter);
-      });
-    }
-
-    if (salesHeader && maxSalesFilter !== "") {
-      data = data.filter((row) => {
-        const value = Number(row[salesHeader]);
-        return !Number.isNaN(value) && value <= Number(maxSalesFilter);
-      });
-    }
-
-    if (sortConfig.key) {
-      data.sort((a, b) => {
-        const aVal = a[sortConfig.key];
-        const bVal = b[sortConfig.key];
-
-        if (typeof aVal === "number" && typeof bVal === "number") {
-          return sortConfig.direction === "asc" ? aVal - bVal : bVal - aVal;
-        }
-
-        return sortConfig.direction === "asc"
-          ? String(aVal).localeCompare(String(bVal))
-          : String(bVal).localeCompare(String(aVal));
-      });
-    }
-
-    return data;
-  }, [
-    baseFilteredRows,
-    tableSearch,
-    headers,
-    selectedRegion,
-    selectedMonth,
-    minSalesFilter,
-    maxSalesFilter,
-    regionHeader,
-    monthHeader,
-    salesHeader,
-    sortConfig,
   ]);
 
   const effectiveRowsPerPage = Math.min(
@@ -478,13 +356,8 @@ export default function App() {
   const safeCurrentPage = Math.min(currentPage, totalPages);
   const startIndex = (safeCurrentPage - 1) * effectiveRowsPerPage;
   const endIndex = startIndex + effectiveRowsPerPage;
-  const visibleRows = filteredRows.slice(startIndex, endIndex);
 
-  const pageNumbers = useMemo(() => {
-    const pages = [];
-    for (let i = 1; i <= totalPages; i += 1) pages.push(i);
-    return pages;
-  }, [totalPages]);
+  const visibleRows = filteredRows.slice(startIndex, endIndex);
 
   const maxChartValue = Math.max(
     ...chartData.map((item) => (typeof item.value === "number" ? item.value : 0)),
@@ -504,25 +377,12 @@ export default function App() {
       ? "Region Wise Sales Distribution"
       : "Monthly Sales Trend";
 
-  const tableHeaders = useMemo(() => {
-    if (headers.length) return headers;
-    return ["Column 1"];
-  }, [headers]);
-
   useEffect(() => {
     if (currentUser) {
       setLoggedIn(true);
       setName(currentUser);
     }
   }, [currentUser]);
-
-  useEffect(() => {
-    localStorage.setItem("datavista_theme", theme);
-  }, [theme]);
-
-  useEffect(() => {
-    localStorage.setItem("datavista_saved_queries", JSON.stringify(savedQueries));
-  }, [savedQueries]);
 
   useEffect(() => {
     if (!chartData.length || chartType === "region" || chartType === "month") {
@@ -536,18 +396,7 @@ export default function App() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [
-    tableSearch,
-    activeQuery,
-    rowsPerPage,
-    hasAnalyzed,
-    csvText,
-    selectedRegion,
-    selectedMonth,
-    minSalesFilter,
-    maxSalesFilter,
-    sortConfig,
-  ]);
+  }, [tableSearch, activeQuery, rowsPerPage, hasAnalyzed, csvText]);
 
   const handleSignup = (e) => {
     e.preventDefault();
@@ -622,9 +471,6 @@ export default function App() {
   };
 
   const handleLogout = () => {
-    const confirmed = window.confirm("Are you sure you want to logout?");
-    if (!confirmed) return;
-
     setLoggedIn(false);
     setEmail("");
     setPassword("");
@@ -657,11 +503,6 @@ export default function App() {
       setRowsPerPage(8);
       setCurrentPage(1);
       setChartType("top");
-      setSelectedRegion("all");
-      setSelectedMonth("all");
-      setMinSalesFilter("");
-      setMaxSalesFilter("");
-      setSortConfig({ key: "", direction: "asc" });
 
       setResultText("Dataset uploaded successfully.");
       setInsightText(
@@ -683,7 +524,7 @@ export default function App() {
     if (!q) {
       setResultText("Please enter a question.");
       setInsightText(
-        "Try queries like top product, total sales, average sales, product in January, or region wise sales."
+        "Try queries like top product, total sales, average, monthly sales, or region wise sales."
       );
       return;
     }
@@ -693,25 +534,17 @@ export default function App() {
     setTimeout(() => {
       let nextChartType = "top";
       let response = "Query analyzed successfully.";
-      let nextRegion = "all";
-      let nextMonth = "all";
-
-      const matchedRegion = regionOptions.find((item) =>
-        q.includes(String(item).toLowerCase())
-      );
-      const matchedMonth = monthOptions.find((item) =>
-        q.includes(String(item).toLowerCase())
-      );
-
-      if (matchedRegion) nextRegion = String(matchedRegion);
-      if (matchedMonth) nextMonth = String(matchedMonth);
 
       if (q.includes("top")) {
-        nextChartType = matchedMonth ? "month" : matchedRegion ? "region" : "top";
-        response = `Top analysis generated successfully.`;
+        nextChartType = "top";
+        response = `Top product is ${topProduct?.[productHeader] || "-"} with sales ${formatNumber(
+          topProduct?.[salesHeader] || 0
+        )}`;
       } else if (q.includes("lowest")) {
         nextChartType = "lowest";
-        response = `Lowest product analysis generated successfully.`;
+        response = `Lowest product is ${
+          lowestProduct?.[productHeader] || "-"
+        } with sales ${formatNumber(lowestProduct?.[salesHeader] || 0)}`;
       } else if (q.includes("average")) {
         nextChartType = "average";
         response = `Average sales is ${formatNumber(Number(averageSales.toFixed(2)))}`;
@@ -721,7 +554,7 @@ export default function App() {
       } else if (q.includes("region")) {
         nextChartType = "region";
         response = "Showing region wise sales distribution.";
-      } else if (q.includes("month") || matchedMonth) {
+      } else if (q.includes("month")) {
         nextChartType = "month";
         response = "Showing monthly sales trend.";
       }
@@ -742,18 +575,10 @@ export default function App() {
       setHasAnalyzed(true);
       setActiveQuery(q);
       setTableSearch("");
-      setSelectedRegion(nextRegion);
-      setSelectedMonth(nextMonth);
       setCurrentPage(1);
 
       setResultText(response);
-      setInsightText(
-        matchedRegion || matchedMonth
-          ? `${autoInsight} Auto filters applied${matchedRegion ? ` for ${matchedRegion}` : ""}${
-              matchedMonth ? ` and ${matchedMonth}` : ""
-            }.`
-          : autoInsight
-      );
+      setInsightText(autoInsight);
 
       setRecentQueries((prev) => [q, ...prev.filter((item) => item !== q)].slice(0, 5));
       setLoading(false);
@@ -762,12 +587,6 @@ export default function App() {
 
   const handleQuickQuery = (text) => {
     setQuery(text);
-  };
-
-  const handleSaveCurrentQuery = () => {
-    const clean = query.trim();
-    if (!clean) return;
-    setSavedQueries((prev) => [clean, ...prev.filter((item) => item !== clean)].slice(0, 8));
   };
 
   const resetDashboard = () => {
@@ -785,64 +604,15 @@ export default function App() {
     setRowsPerPage(8);
     setCurrentPage(1);
     setChartType("top");
-    setSelectedRegion("all");
-    setSelectedMonth("all");
-    setMinSalesFilter("");
-    setMaxSalesFilter("");
-    setSortConfig({ key: "", direction: "asc" });
 
     setResultText("Upload your CSV and ask a question to generate smart insights.");
     setInsightText("Dashboard loaded successfully. Upload a CSV to unlock live visual analysis.");
   };
 
-  const handleSort = (header) => {
-    setSortConfig((prev) => {
-      if (prev.key === header) {
-        return {
-          key: header,
-          direction: prev.direction === "asc" ? "desc" : "asc",
-        };
-      }
-      return {
-        key: header,
-        direction: "asc",
-      };
-    });
-  };
-
-  const handleDownloadFilteredCsv = () => {
-    const csv = rowsToCsv(tableHeaders, filteredRows);
-    downloadCsv(`filtered_${fileName || "dataset.csv"}`, csv);
-  };
-
-  const handleDownloadChart = async () => {
-    if (!chartRef.current) return;
-
-    const canvas = await html2canvas(chartRef.current, {
-      backgroundColor: null,
-      scale: 2,
-    });
-
-    const url = canvas.toDataURL("image/png");
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "chart.png";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  };
-
-  const clearAllFilters = () => {
-    setTableSearch("");
-    setSelectedRegion("all");
-    setSelectedMonth("all");
-    setMinSalesFilter("");
-    setMaxSalesFilter("");
-    setSortConfig({ key: "", direction: "asc" });
-    setCurrentPage(1);
-  };
-
-  const isDark = theme === "dark";
+  const tableHeaders = useMemo(() => {
+    if (headers.length) return headers;
+    return ["Column 1"];
+  }, [headers]);
 
   if (!loggedIn) {
     return (
@@ -1057,12 +827,10 @@ export default function App() {
         html, body, #root { min-height: 100%; }
         body {
           font-family: Inter, Arial, sans-serif;
-          color: ${isDark ? "#f8fafc" : "#0f172a"};
-          background: ${
-            isDark
-              ? "radial-gradient(circle at top center, rgba(126, 87, 255, 0.22), transparent 25%), linear-gradient(180deg, #0a1022 0%, #09152e 100%)"
-              : "linear-gradient(180deg, #eef2ff 0%, #f8fafc 100%)"
-          };
+          color: #f8fafc;
+          background:
+            radial-gradient(circle at top center, rgba(126, 87, 255, 0.22), transparent 25%),
+            linear-gradient(180deg, #0a1022 0%, #09152e 100%);
         }
 
         .app {
@@ -1073,19 +841,15 @@ export default function App() {
 
         .container {
           width: 100%;
-          max-width: 1320px;
+          max-width: 1280px;
           margin: 0 auto;
         }
 
         .panel {
-          background: ${
-            isDark
-              ? "linear-gradient(180deg, rgba(11, 25, 64, 0.96), rgba(8, 20, 53, 0.96))"
-              : "linear-gradient(180deg, rgba(255,255,255,0.95), rgba(248,250,252,0.95))"
-          };
-          border: 1px solid ${isDark ? "rgba(102, 126, 234, 0.22)" : "rgba(148, 163, 184, 0.3)"};
+          background: linear-gradient(180deg, rgba(11, 25, 64, 0.96), rgba(8, 20, 53, 0.96));
+          border: 1px solid rgba(102, 126, 234, 0.22);
           border-radius: 30px;
-          box-shadow: 0 14px 40px rgba(0,0,0,0.12);
+          box-shadow: 0 14px 40px rgba(0,0,0,0.22);
         }
 
         .hero {
@@ -1118,11 +882,10 @@ export default function App() {
           background: linear-gradient(135deg, #7c4dff, #ff4da6);
           box-shadow: 0 12px 30px rgba(124, 77, 255, 0.35);
           font-size: 28px;
-          color: white;
         }
 
         .hero-title h1 {
-          font-size: 48px;
+          font-size: 52px;
           line-height: 1;
           font-weight: 800;
           letter-spacing: -1.2px;
@@ -1131,32 +894,19 @@ export default function App() {
         .hero-title p {
           margin-top: 8px;
           font-size: 17px;
-          color: ${isDark ? "#c7d2fe" : "#475569"};
+          color: #c7d2fe;
           max-width: 780px;
         }
 
-        .top-actions {
-          display: flex;
-          gap: 12px;
-          flex-wrap: wrap;
-        }
-
-        .toggle-btn, .logout-btn {
+        .logout-btn {
           border: none;
           border-radius: 16px;
-          padding: 14px 20px;
+          padding: 14px 22px;
+          background: linear-gradient(135deg, #ef4444, #dc2626);
           color: white;
           font-size: 15px;
           font-weight: 800;
           cursor: pointer;
-        }
-
-        .toggle-btn {
-          background: linear-gradient(135deg, #0ea5e9, #2563eb);
-        }
-
-        .logout-btn {
-          background: linear-gradient(135deg, #ef4444, #dc2626);
         }
 
         .hero-grid {
@@ -1168,12 +918,8 @@ export default function App() {
         .upload-card, .how-card {
           border-radius: 24px;
           padding: 30px 24px;
-          border: 1px solid ${isDark ? "rgba(122, 142, 255, 0.22)" : "rgba(148, 163, 184, 0.24)"};
-          background: ${
-            isDark
-              ? "linear-gradient(135deg, rgba(56,47,120,.45), rgba(17,31,78,.45))"
-              : "linear-gradient(135deg, rgba(99,102,241,.08), rgba(59,130,246,.06))"
-          };
+          border: 1px solid rgba(122, 142, 255, 0.22);
+          background: linear-gradient(135deg, rgba(56,47,120,.45), rgba(17,31,78,.45));
           min-height: 190px;
         }
 
@@ -1183,7 +929,7 @@ export default function App() {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          border: 1.5px dashed ${isDark ? "rgba(161,167,255,.3)" : "rgba(99,102,241,.35)"};
+          border: 1.5px dashed rgba(161,167,255,.3);
           border-radius: 20px;
           padding: 22px;
           cursor: pointer;
@@ -1192,6 +938,7 @@ export default function App() {
 
         .upload-inner:hover {
           transform: translateY(-2px);
+          border-color: rgba(167,139,250,.55);
           box-shadow: 0 0 0 6px rgba(99,102,241,.08);
         }
 
@@ -1206,7 +953,7 @@ export default function App() {
         }
 
         .upload-inner p {
-          color: ${isDark ? "#b8c2f0" : "#475569"};
+          color: #b8c2f0;
           text-align: center;
           line-height: 1.6;
         }
@@ -1221,8 +968,8 @@ export default function App() {
           list-style: none;
           display: grid;
           gap: 16px;
-          font-size: 18px;
-          color: ${isDark ? "#d8defe" : "#334155"};
+          font-size: 19px;
+          color: #d8defe;
           line-height: 1.5;
           padding-top: 4px;
           max-width: 340px;
@@ -1245,15 +992,15 @@ export default function App() {
           border-radius: 999px;
           background: rgba(16,185,129,.12);
           border: 1px solid rgba(16,185,129,.4);
-          color: ${isDark ? "#d1fae5" : "#065f46"};
+          color: #d1fae5;
           font-weight: 700;
           font-size: 18px;
         }
 
         .dataset-pill.empty {
-          background: ${isDark ? "rgba(255,255,255,.06)" : "rgba(15,23,42,.04)"};
-          border: 1px solid ${isDark ? "rgba(255,255,255,.12)" : "rgba(148,163,184,.28)"};
-          color: ${isDark ? "#cbd5e1" : "#475569"};
+          background: rgba(255,255,255,.06);
+          border: 1px solid rgba(255,255,255,.12);
+          color: #cbd5e1;
         }
 
         .dot {
@@ -1275,7 +1022,7 @@ export default function App() {
           border: none;
           border-radius: 16px;
           padding: 14px 24px;
-          font-size: 15px;
+          font-size: 16px;
           font-weight: 700;
           cursor: pointer;
           color: white;
@@ -1284,7 +1031,7 @@ export default function App() {
 
         .btn:hover {
           transform: translateY(-2px);
-          box-shadow: 0 10px 22px rgba(0,0,0,.16);
+          box-shadow: 0 10px 22px rgba(0,0,0,.2);
         }
 
         .btn:disabled {
@@ -1294,12 +1041,17 @@ export default function App() {
           box-shadow: none;
         }
 
-        .btn-reset { background: linear-gradient(135deg, #ff5a36, #ff6b3d); }
-        .btn-download { background: linear-gradient(135deg, #22c55e, #16a34a); }
-        .btn-save { background: linear-gradient(135deg, #f59e0b, #ea580c); }
-        .btn-chart { background: linear-gradient(135deg, #06b6d4, #2563eb); }
+        .btn-reset {
+          background: linear-gradient(135deg, #ff5a36, #ff6b3d);
+        }
 
-        .file-input { display: none; }
+        .btn-download {
+          background: linear-gradient(135deg, #22c55e, #16a34a);
+        }
+
+        .file-input {
+          display: none;
+        }
 
         .summary, .ask-panel, .chart-panel, .table-panel {
           padding: 28px;
@@ -1325,27 +1077,24 @@ export default function App() {
           min-height: 112px;
           border-radius: 20px;
           padding: 22px 16px;
-          background: ${isDark ? "rgba(18,34,79,.88)" : "rgba(255,255,255,.75)"};
-          border: 1px solid ${isDark ? "rgba(111,133,221,.22)" : "rgba(148,163,184,.22)"};
+          background: rgba(18,34,79,.88);
+          border: 1px solid rgba(111,133,221,.22);
           display: flex;
           flex-direction: column;
           justify-content: center;
           align-items: center;
-          transition: .25s ease;
         }
 
-        .stat-card:hover { transform: translateY(-3px); }
-
         .stat-card h4 {
-          color: ${isDark ? "#aeb8de" : "#64748b"};
-          font-size: 15px;
+          color: #aeb8de;
+          font-size: 16px;
           font-weight: 500;
           margin-bottom: 14px;
           text-align: center;
         }
 
         .stat-card .value {
-          font-size: 24px;
+          font-size: 26px;
           font-weight: 800;
         }
 
@@ -1357,8 +1106,8 @@ export default function App() {
 
         .mini-panel {
           border-radius: 22px;
-          background: ${isDark ? "rgba(15,28,68,.9)" : "rgba(255,255,255,.8)"};
-          border: 1px solid ${isDark ? "rgba(111,133,221,.22)" : "rgba(148,163,184,.22)"};
+          background: rgba(15,28,68,.9);
+          border: 1px solid rgba(111,133,221,.22);
           padding: 22px;
           min-height: 170px;
         }
@@ -1376,9 +1125,9 @@ export default function App() {
         }
 
         .mini-panel li {
-          color: ${isDark ? "#d7ddfb" : "#334155"};
-          background: ${isDark ? "rgba(255,255,255,.03)" : "rgba(15,23,42,.03)"};
-          border: 1px solid ${isDark ? "rgba(255,255,255,.05)" : "rgba(148,163,184,.12)"};
+          color: #d7ddfb;
+          background: rgba(255,255,255,.03);
+          border: 1px solid rgba(255,255,255,.05);
           border-radius: 14px;
           padding: 12px 14px;
           line-height: 1.55;
@@ -1393,37 +1142,37 @@ export default function App() {
 
         .query-row {
           display: grid;
-          grid-template-columns: 1fr 170px 170px;
+          grid-template-columns: 1fr 170px;
           gap: 14px;
           align-items: center;
           margin-bottom: 16px;
-          max-width: 1200px;
+          max-width: 1040px;
           margin-left: auto;
           margin-right: auto;
         }
 
-        .query-input, .table-search, .rows-select, .filter-select, .filter-input, .page-select {
+        .query-input, .table-search, .rows-select {
           width: 100%;
-          height: 52px;
+          height: 56px;
           border-radius: 18px;
-          border: 1px solid ${isDark ? "rgba(145,157,215,.2)" : "rgba(148,163,184,.3)"};
-          background: ${isDark ? "rgba(255,255,255,.06)" : "rgba(255,255,255,.9)"};
-          color: ${isDark ? "white" : "#0f172a"};
-          padding: 0 18px;
-          font-size: 15px;
+          border: 1px solid rgba(145,157,215,.2);
+          background: rgba(255,255,255,.06);
+          color: white;
+          padding: 0 20px;
+          font-size: 16px;
           outline: none;
         }
 
-        .query-input::placeholder, .table-search::placeholder, .filter-input::placeholder {
-          color: ${isDark ? "#92a0d3" : "#64748b"};
+        .query-input::placeholder, .table-search::placeholder {
+          color: #92a0d3;
         }
 
         .analyze-btn {
-          height: 52px;
+          height: 56px;
           background: linear-gradient(135deg, #6d5dfc, #8b5cf6);
         }
 
-        .chip-row, .saved-row {
+        .chip-row {
           display: flex;
           flex-wrap: wrap;
           justify-content: center;
@@ -1431,19 +1180,20 @@ export default function App() {
           margin-bottom: 16px;
         }
 
-        .chip, .saved-pill {
+        .chip {
           border-radius: 999px;
-          border: 1px solid ${isDark ? "rgba(128,145,242,.35)" : "rgba(99,102,241,.25)"};
-          background: ${isDark ? "rgba(94,110,218,.08)" : "rgba(99,102,241,.08)"};
-          color: ${isDark ? "#e5e7eb" : "#1e293b"};
-          padding: 10px 15px;
+          border: 1px solid rgba(128,145,242,.35);
+          background: rgba(94,110,218,.08);
+          color: #e5e7eb;
+          padding: 11px 16px;
           cursor: pointer;
-          font-size: 14px;
+          font-size: 15px;
           transition: .24s ease;
         }
 
-        .chip:hover, .saved-pill:hover {
+        .chip:hover {
           transform: translateY(-2px);
+          background: rgba(94,110,218,.16);
         }
 
         .info-box {
@@ -1452,10 +1202,10 @@ export default function App() {
           border-radius: 20px;
           padding: 16px 18px;
           text-align: center;
-          background: ${isDark ? "rgba(49,83,185,.22)" : "rgba(59,130,246,.08)"};
-          border: 1px solid ${isDark ? "rgba(91,120,232,.35)" : "rgba(59,130,246,.16)"};
-          color: ${isDark ? "#d7e3ff" : "#1e40af"};
-          font-size: 16px;
+          background: rgba(49,83,185,.22);
+          border: 1px solid rgba(91,120,232,.35);
+          color: #d7e3ff;
+          font-size: 18px;
           line-height: 1.55;
         }
 
@@ -1473,12 +1223,13 @@ export default function App() {
           font-size: 28px;
           font-weight: 800;
           margin-bottom: 10px;
+          color: #ffffff;
         }
 
         .result-card p {
           font-size: 17px;
+          color: #dbeafe;
           line-height: 1.6;
-          color: ${isDark ? "#dbeafe" : "#1e3a8a"};
         }
 
         .recent-inline {
@@ -1493,14 +1244,14 @@ export default function App() {
         .recent-pill {
           padding: 10px 16px;
           border-radius: 999px;
-          background: ${isDark ? "rgba(255,255,255,.06)" : "rgba(15,23,42,.05)"};
-          border: 1px solid ${isDark ? "rgba(255,255,255,.08)" : "rgba(148,163,184,.18)"};
-          color: ${isDark ? "#e5e7eb" : "#334155"};
+          background: rgba(255,255,255,.06);
+          border: 1px solid rgba(255,255,255,.08);
+          color: #e5e7eb;
         }
 
         .small-meta {
           text-align: center;
-          color: ${isDark ? "#93a1cc" : "#64748b"};
+          color: #93a1cc;
           font-size: 16px;
           margin-top: 8px;
         }
@@ -1511,25 +1262,11 @@ export default function App() {
           border-radius: 18px;
           padding: 14px 18px;
           text-align: center;
+          color: #dbeafe;
           background: rgba(99, 102, 241, 0.18);
           border: 1px solid rgba(129, 140, 248, 0.35);
           font-weight: 700;
           letter-spacing: .4px;
-        }
-
-        .skeleton-grid {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 14px;
-          margin-top: 16px;
-        }
-
-        .skeleton-card {
-          height: 90px;
-          border-radius: 18px;
-          background: linear-gradient(90deg, rgba(255,255,255,.06), rgba(255,255,255,.12), rgba(255,255,255,.06));
-          background-size: 200% 100%;
-          animation: shimmer 1.4s infinite linear;
         }
 
         .typing {
@@ -1552,12 +1289,10 @@ export default function App() {
 
         .chart-wrap {
           margin-top: 10px;
-          min-height: 420px;
-          padding: 16px 18px 18px;
+          height: 420px;
+          padding: 16px 18px 10px;
           position: relative;
           overflow: visible;
-          border-radius: 20px;
-          background: ${isDark ? "rgba(255,255,255,.02)" : "rgba(255,255,255,.55)"};
         }
 
         .legend {
@@ -1566,6 +1301,7 @@ export default function App() {
           justify-content: center;
           gap: 10px;
           margin: 10px 0 8px;
+          color: #e7ebff;
           font-size: 18px;
         }
 
@@ -1574,14 +1310,6 @@ export default function App() {
           height: 16px;
           border-radius: 4px;
           background: linear-gradient(180deg, #7068f3, #5b61e8);
-        }
-
-        .chart-toolbar {
-          display: flex;
-          justify-content: center;
-          gap: 12px;
-          margin-bottom: 14px;
-          flex-wrap: wrap;
         }
 
         .chart-area {
@@ -1601,7 +1329,7 @@ export default function App() {
           position: absolute;
           left: 0;
           transform: translateY(50%);
-          color: ${isDark ? "#c4cbe8" : "#64748b"};
+          color: #c4cbe8;
           font-size: 13px;
         }
 
@@ -1610,24 +1338,24 @@ export default function App() {
           position: relative;
           height: 100%;
           padding: 24px 0 50px;
-          border-left: 1px solid ${isDark ? "rgba(255,255,255,.08)" : "rgba(148,163,184,.22)"};
-          border-bottom: 1px solid ${isDark ? "rgba(255,255,255,.08)" : "rgba(148,163,184,.22)"};
+          border-left: 1px solid rgba(255,255,255,.08);
+          border-bottom: 1px solid rgba(255,255,255,.08);
           display: flex;
           align-items: flex-end;
-          gap: 18px;
+          gap: 22px;
         }
 
         .grid-line {
           position: absolute;
           left: 0;
           right: 0;
-          border-top: 1px solid ${isDark ? "rgba(255,255,255,.06)" : "rgba(148,163,184,.14)"};
+          border-top: 1px solid rgba(255,255,255,.06);
           z-index: 0;
         }
 
         .bar-group {
           flex: 1;
-          min-width: 58px;
+          min-width: 60px;
           max-width: 120px;
           display: flex;
           flex-direction: column;
@@ -1636,36 +1364,25 @@ export default function App() {
           height: 100%;
         }
 
-        .bar-value {
-          font-size: 12px;
-          margin-bottom: 8px;
-          color: ${isDark ? "#dbeafe" : "#334155"};
-          text-align: center;
-        }
-
         .bar {
           width: 100%;
           border-radius: 16px 16px 0 0;
-          box-shadow: 0 14px 30px rgba(92,97,232,.18);
-          transition: height 1s cubic-bezier(.2,.8,.2,1), transform .2s ease;
+          background: linear-gradient(180deg, #7068f3, #5b61e8);
+          box-shadow: 0 14px 30px rgba(92,97,232,.25);
+          transition: height 1s cubic-bezier(.2,.8,.2,1);
           position: relative;
           z-index: 2;
         }
 
-        .bar:hover {
-          transform: translateY(-4px);
-        }
-
         .bar-label-x {
           margin-top: 10px;
-          font-size: 13px;
-          color: ${isDark ? "#d5daf7" : "#334155"};
+          font-size: 14px;
+          color: #d5daf7;
           text-align: center;
-          word-break: break-word;
         }
 
         .line-chart-box {
-          height: 280px;
+          height: 250px;
           display: flex;
           align-items: flex-end;
           gap: 12px;
@@ -1691,22 +1408,23 @@ export default function App() {
         }
 
         .line-stick {
-          width: 10px;
+          width: 8px;
           border-radius: 999px;
+          background: linear-gradient(180deg, #60a5fa, #8b5cf6);
           box-shadow: 0 8px 18px rgba(96,165,250,.25);
           transition: height .9s ease;
         }
 
         .line-value {
           font-size: 12px;
-          color: ${isDark ? "#cbd5e1" : "#334155"};
+          color: #cbd5e1;
           margin-bottom: 6px;
           text-align: center;
         }
 
         .line-label {
           margin-top: 8px;
-          color: ${isDark ? "#d5daf7" : "#334155"};
+          color: #d5daf7;
           font-size: 13px;
           text-align: center;
         }
@@ -1720,12 +1438,12 @@ export default function App() {
         }
 
         .pie-main {
-          width: 210px;
-          height: 210px;
+          width: 200px;
+          height: 200px;
           margin: 0 auto;
           border-radius: 50%;
-          border: 10px solid ${isDark ? "rgba(255,255,255,.08)" : "rgba(148,163,184,.18)"};
-          box-shadow: inset 0 0 0 16px ${isDark ? "rgba(10,16,34,.9)" : "rgba(255,255,255,.82)"};
+          border: 10px solid rgba(255,255,255,.08);
+          box-shadow: inset 0 0 0 16px rgba(10,16,34,.9);
           position: relative;
           overflow: hidden;
         }
@@ -1733,13 +1451,14 @@ export default function App() {
         .pie-hole {
           position: absolute;
           inset: 46px;
-          background: ${isDark ? "linear-gradient(180deg, #0b1940, #081435)" : "linear-gradient(180deg, #ffffff, #f1f5f9)"};
+          background: linear-gradient(180deg, #0b1940, #081435);
           border-radius: 50%;
-          border: 1px solid ${isDark ? "rgba(255,255,255,.08)" : "rgba(148,163,184,.18)"};
+          border: 1px solid rgba(255,255,255,.08);
           display: flex;
           align-items: center;
           justify-content: center;
           text-align: center;
+          color: #e5e7eb;
           font-weight: 800;
           padding: 14px;
           font-size: 13px;
@@ -1764,14 +1483,15 @@ export default function App() {
           gap: 14px;
           padding: 10px 12px;
           border-radius: 14px;
-          background: ${isDark ? "rgba(255,255,255,.04)" : "rgba(255,255,255,.7)"};
-          border: 1px solid ${isDark ? "rgba(255,255,255,.06)" : "rgba(148,163,184,.14)"};
+          background: rgba(255,255,255,.04);
+          border: 1px solid rgba(255,255,255,.06);
         }
 
         .pie-left {
           display: flex;
           align-items: center;
           gap: 10px;
+          color: #e5e7eb;
         }
 
         .pie-color {
@@ -1781,7 +1501,7 @@ export default function App() {
         }
 
         .pie-right {
-          color: ${isDark ? "#c7d2fe" : "#334155"};
+          color: #c7d2fe;
           font-weight: 700;
           text-align: right;
           font-size: 14px;
@@ -1792,7 +1512,7 @@ export default function App() {
           justify-content: space-between;
           align-items: center;
           gap: 16px;
-          margin-bottom: 16px;
+          margin-bottom: 20px;
           flex-wrap: wrap;
         }
 
@@ -1802,15 +1522,28 @@ export default function App() {
         }
 
         .table-controls {
-          display: grid;
-          grid-template-columns: repeat(6, minmax(120px, 1fr));
+          display: flex;
           gap: 12px;
-          width: 100%;
+          flex-wrap: wrap;
+        }
+        
+        .rows-select {
+          width: 120px;
+          background: rgba(255,255,255,.06);
+          color: white;
+          border: 1px solid rgba(145,157,215,.2);
+          border-radius: 18px;
+          padding: 0 16px;
+          height: 56px;
+          outline: none;
+          appearance: none;
+          -webkit-appearance: none;
+          -moz-appearance: none;
         }
 
-        .rows-select option, .filter-select option, .page-select option {
-          background: ${isDark ? "#0f1b45" : "#ffffff"};
-          color: ${isDark ? "white" : "#0f172a"};
+        .rows-select option {
+          background: #0f1b45;
+          color: white;
         }
 
         .table-wrap {
@@ -1821,69 +1554,29 @@ export default function App() {
         table {
           width: 100%;
           border-collapse: collapse;
-          min-width: 900px;
+          min-width: 700px;
         }
 
         th, td {
           padding: 16px 14px;
           text-align: left;
-          border-bottom: 1px solid ${isDark ? "rgba(255,255,255,.07)" : "rgba(148,163,184,.18)"};
+          border-bottom: 1px solid rgba(255,255,255,.07);
           font-size: 15px;
         }
 
         th {
+          color: #f8fafc;
           font-size: 16px;
           font-weight: 800;
-          background: ${isDark ? "rgba(255,255,255,.02)" : "rgba(255,255,255,.85)"};
-          cursor: pointer;
-          user-select: none;
-          white-space: nowrap;
+          background: rgba(255,255,255,.02);
         }
 
         td {
-          color: ${isDark ? "#d8dff7" : "#334155"};
+          color: #d8dff7;
         }
 
         tr:hover td {
-          background: ${isDark ? "rgba(255,255,255,.025)" : "rgba(99,102,241,.04)"};
-        }
-
-        .pagination-bar {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 12px;
-          margin-top: 18px;
-          flex-wrap: wrap;
-        }
-
-        .page-pills {
-          display: flex;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
-
-        .page-btn {
-          min-width: 40px;
-          height: 40px;
-          border: none;
-          border-radius: 12px;
-          cursor: pointer;
-          font-weight: 700;
-          background: ${isDark ? "rgba(255,255,255,.06)" : "rgba(15,23,42,.05)"};
-          color: ${isDark ? "#fff" : "#0f172a"};
-        }
-
-        .page-btn.active {
-          background: linear-gradient(135deg, #6d5dfc, #8b5cf6);
-          color: white;
-        }
-
-        .subheading {
-          text-align: center;
-          margin-bottom: 12px;
-          color: ${isDark ? "#93a1cc" : "#64748b"};
-          font-size: 14px;
+          background: rgba(255,255,255,.025);
         }
 
         @keyframes fadeIn {
@@ -1901,39 +1594,30 @@ export default function App() {
           40% { transform: translateY(-6px); opacity: 1; }
         }
 
-        @keyframes shimmer {
-          0% { background-position: 200% 0; }
-          100% { background-position: -200% 0; }
-        }
-
         @media (max-width: 1200px) {
-          .hero-title h1 { font-size: 40px; }
+          .hero-title h1 { font-size: 44px; }
           .stats-grid { grid-template-columns: repeat(3, 1fr); }
-          .table-controls { grid-template-columns: repeat(3, minmax(120px, 1fr)); }
         }
 
         @media (max-width: 950px) {
-          .hero-grid, .dual-grid, .pie-wrap { grid-template-columns: 1fr; }
-          .query-row { grid-template-columns: 1fr; }
+          .hero-grid, .dual-grid, .query-row, .pie-wrap { grid-template-columns: 1fr; }
           .stats-grid { grid-template-columns: repeat(2, 1fr); }
           .hero, .summary, .ask-panel, .chart-panel, .table-panel { padding: 22px 16px; }
-          .hero-title h1 { font-size: 32px; }
+          .hero-title h1 { font-size: 34px; }
           .pie-main { width: 180px; height: 180px; }
           .pie-hole { inset: 40px; }
-          .table-controls { grid-template-columns: repeat(2, minmax(120px, 1fr)); }
         }
 
         @media (max-width: 640px) {
-          .stats-grid, .table-controls, .skeleton-grid { grid-template-columns: 1fr; }
+          .stats-grid { grid-template-columns: 1fr; }
           .hero-title h1 { font-size: 28px; }
           .hero-title p { font-size: 15px; }
           .section-title, .ask-title, .table-head h2 { font-size: 24px; }
           .plot { gap: 10px; }
           .bar-group { min-width: 48px; }
-          .chart-wrap { min-height: 300px; }
+          .chart-wrap { height: 280px; }
           .result-card h3 { font-size: 22px; }
           .result-card p { font-size: 15px; }
-          .top-actions { width: 100%; }
         }
       `}</style>
 
@@ -1946,23 +1630,14 @@ export default function App() {
                 <div className="hero-title">
                   <h1>DataVista AI Dashboard</h1>
                   <p>
-                    Welcome{name ? `, ${name}` : ""}! Upload data, ask questions, and get instant charts, filters, exports, and smart summaries.
+                    Welcome{name ? `, ${name}` : ""}! Upload data, ask questions, and get instant charts, insights, and summaries.
                   </p>
                 </div>
               </div>
 
-              <div className="top-actions">
-                <button
-                  className="toggle-btn"
-                  onClick={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
-                >
-                  {isDark ? "Light Mode" : "Dark Mode"}
-                </button>
-
-                <button className="logout-btn" onClick={handleLogout}>
-                  Logout
-                </button>
-              </div>
+              <button className="logout-btn" onClick={handleLogout}>
+                Logout
+              </button>
             </div>
 
             <div className="hero-grid">
@@ -1982,8 +1657,8 @@ export default function App() {
                 <h3>How it works</h3>
                 <ul className="how-list">
                   <li>1. Upload your CSV file</li>
-                  <li>2. Ask a natural query</li>
-                  <li>3. Apply filters, sort, export, and compare</li>
+                  <li>2. Enter a natural language query</li>
+                  <li>3. Click Analyze to generate insights</li>
                 </ul>
               </div>
             </div>
@@ -2011,14 +1686,6 @@ export default function App() {
                   disabled={!hasUploaded}
                 >
                   Download CSV
-                </button>
-
-                <button
-                  className="btn btn-save"
-                  onClick={handleSaveCurrentQuery}
-                  disabled={!query.trim()}
-                >
-                  Save Query
                 </button>
               </div>
             </div>
@@ -2055,34 +1722,6 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="stats-grid" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
-                <div className="stat-card">
-                  <h4>Top Product</h4>
-                  <div className="value" style={{ fontSize: "18px", textAlign: "center" }}>
-                    {topProduct?.[productHeader] || "-"}
-                  </div>
-                </div>
-
-                <div className="stat-card">
-                  <h4>Lowest Product</h4>
-                  <div className="value" style={{ fontSize: "18px", textAlign: "center" }}>
-                    {lowestProduct?.[productHeader] || "-"}
-                  </div>
-                </div>
-
-                <div className="stat-card">
-                  <h4>Average Sales</h4>
-                  <div className="value">{formatNumber(Number(averageSales.toFixed(2)))}</div>
-                </div>
-
-                <div className="stat-card">
-                  <h4>Growth %</h4>
-                  <div className="value">
-                    {Number.isFinite(growthPercentage) ? `${growthPercentage.toFixed(1)}%` : "0%"}
-                  </div>
-                </div>
-              </div>
-
               <div className="dual-grid">
                 <div className="mini-panel">
                   <h3>Highlights</h3>
@@ -2103,8 +1742,8 @@ export default function App() {
                   <h3>Project Strength</h3>
                   <ul>
                     <li>CSV upload and intelligent dashboard flow.</li>
-                    <li>Sorting, filters, export, pagination, saved queries.</li>
-                    <li>Theme toggle and chart image download support.</li>
+                    <li>Query-based chart and table updates.</li>
+                    <li>Professional compact dashboard layout.</li>
                   </ul>
                 </div>
               </div>
@@ -2118,7 +1757,7 @@ export default function App() {
               <input
                 className="query-input"
                 type="text"
-                placeholder="Ask a question... e.g. top product in January or region wise sales"
+                placeholder="Ask a question..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
@@ -2128,14 +1767,6 @@ export default function App() {
                 disabled={!hasUploaded || !query.trim() || loading}
               >
                 {loading ? "Analyzing..." : "Analyze"}
-              </button>
-
-              <button
-                className="btn btn-save"
-                onClick={handleSaveCurrentQuery}
-                disabled={!query.trim()}
-              >
-                Save Query
               </button>
             </div>
 
@@ -2147,8 +1778,6 @@ export default function App() {
                 "total sales",
                 "region wise sales",
                 "monthly sales",
-                "top product in january",
-                "sales in west region",
               ].map((chip) => (
                 <button
                   key={chip}
@@ -2165,43 +1794,19 @@ export default function App() {
               ))}
             </div>
 
-            {savedQueries.length > 0 && (
-              <>
-                <div className="subheading">Saved Queries</div>
-                <div className="saved-row">
-                  {savedQueries.map((item) => (
-                    <button
-                      key={item}
-                      className="saved-pill"
-                      onClick={() => setQuery(item)}
-                    >
-                      {item}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-
             <div className="info-box">
-              Try combined queries like: <strong>top product in January</strong>, <strong>sales in West region</strong>, <strong>monthly sales</strong>, <strong>region wise sales</strong>.
+              Try: top product, lowest product, average sales, total sales, region wise sales, monthly sales.
             </div>
 
             {loading && (
-              <>
-                <div className="loading-box">
-                  Analyzing data
-                  <span className="typing">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                  </span>
-                </div>
-                <div className="skeleton-grid">
-                  <div className="skeleton-card"></div>
-                  <div className="skeleton-card"></div>
-                  <div className="skeleton-card"></div>
-                </div>
-              </>
+              <div className="loading-box">
+                Analyzing data
+                <span className="typing">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </span>
+              </div>
             )}
 
             {hasAnalyzed && (
@@ -2235,13 +1840,7 @@ export default function App() {
                 <span>{chartTitle}</span>
               </div>
 
-              <div className="chart-toolbar">
-                <button className="btn btn-chart" onClick={handleDownloadChart}>
-                  Download Chart Image
-                </button>
-              </div>
-
-              <div className="chart-wrap" ref={chartRef}>
+              <div className="chart-wrap">
                 {chartType !== "region" && chartType !== "month" && (
                   <div className="chart-area">
                     <div className="y-axis">
@@ -2271,15 +1870,7 @@ export default function App() {
 
                         return (
                           <div className="bar-group" key={`${item.name}-${index}`}>
-                            <div className="bar-value">{formatNumber(item.value)}</div>
-                            <div
-                              className="bar"
-                              title={`${item.name}: ${formatNumber(item.value)}`}
-                              style={{
-                                height: barHeight,
-                                background: getBarColor(item.value, maxChartValue),
-                              }}
-                            />
+                            <div className="bar" style={{ height: barHeight }} />
                             <div className="bar-label-x">{item.name}</div>
                           </div>
                         );
@@ -2298,11 +1889,7 @@ export default function App() {
                           <div className="line-point-wrap">
                             <div
                               className="line-stick"
-                              title={`${item.name}: ${formatNumber(item.value)}`}
-                              style={{
-                                height: `${Math.max(rawHeight * 2, 12)}px`,
-                                background: getBarColor(item.value, maxChartValue),
-                              }}
+                              style={{ height: `${Math.max(rawHeight * 2, 12)}px` }}
                             />
                           </div>
                           <div className="line-label">{item.name}</div>
@@ -2329,14 +1916,14 @@ export default function App() {
                         return (
                           <>
                             {chartData.map((item, index) => {
-                              const total = chartData.reduce((sum, x) => sum + x.value, 0);
-                              const percent = total ? (item.value / total) * 100 : 0;
+                              const percent = totalSales
+                                ? (item.value / totalSales) * 100
+                                : 0;
                               const end = start + percent;
                               const segment = (
                                 <div
                                   key={item.name}
                                   className="pie-segment"
-                                  title={`${item.name}: ${formatNumber(item.value)}`}
                                   style={{
                                     background: `conic-gradient(transparent ${start}%, ${colors[index % colors.length]} ${start}%, ${colors[index % colors.length]} ${end}%, transparent ${end}%)`,
                                   }}
@@ -2365,9 +1952,8 @@ export default function App() {
                           "#22c55e",
                           "#f59e0b",
                         ];
-                        const chartTotal = chartData.reduce((sum, x) => sum + x.value, 0);
-                        const percentage = chartTotal
-                          ? ((item.value / chartTotal) * 100).toFixed(1)
+                        const percentage = totalSales
+                          ? ((item.value / totalSales) * 100).toFixed(1)
                           : 0;
 
                         return (
@@ -2399,96 +1985,37 @@ export default function App() {
               <div className="table-head">
                 <h2>Uploaded Data Table</h2>
 
-                <div className="button-row">
-                  <button className="btn btn-download" onClick={handleDownloadFilteredCsv}>
-                    Download Filtered CSV
-                  </button>
+                <div className="table-controls">
+                  <input
+                    className="table-search"
+                    type="text"
+                    placeholder="Search in table..."
+                    value={tableSearch}
+                    onChange={(e) => setTableSearch(e.target.value)}
+                  />
 
-                  <button className="btn btn-reset" onClick={clearAllFilters}>
-                    Clear Filters
-                  </button>
+                  <select
+                    className="rows-select"
+                    value={effectiveRowsPerPage}
+                    onChange={(e) => {
+                      setRowsPerPage(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <option value={5}>5 rows</option>
+                    <option value={8}>8 rows</option>
+                    <option value={10}>10 rows</option>
+                    <option value={15}>15 rows</option>
+                  </select>
                 </div>
               </div>
 
-              <div className="table-controls">
-                <input
-                  className="table-search"
-                  type="text"
-                  placeholder="Search in table..."
-                  value={tableSearch}
-                  onChange={(e) => setTableSearch(e.target.value)}
-                />
-
-                <select
-                  className="filter-select"
-                  value={selectedRegion}
-                  onChange={(e) => setSelectedRegion(e.target.value)}
-                >
-                  <option value="all">All Regions</option>
-                  {regionOptions.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  className="filter-select"
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(e.target.value)}
-                >
-                  <option value="all">All Months</option>
-                  {monthOptions.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
-
-                <input
-                  className="filter-input"
-                  type="number"
-                  placeholder="Min Sales"
-                  value={minSalesFilter}
-                  onChange={(e) => setMinSalesFilter(e.target.value)}
-                />
-
-                <input
-                  className="filter-input"
-                  type="number"
-                  placeholder="Max Sales"
-                  value={maxSalesFilter}
-                  onChange={(e) => setMaxSalesFilter(e.target.value)}
-                />
-
-                <select
-                  className="rows-select"
-                  value={effectiveRowsPerPage}
-                  onChange={(e) => {
-                    setRowsPerPage(Number(e.target.value));
-                    setCurrentPage(1);
-                  }}
-                >
-                  <option value={5}>5 rows</option>
-                  <option value={8}>8 rows</option>
-                  <option value={10}>10 rows</option>
-                  <option value={15}>15 rows</option>
-                </select>
-              </div>
-
-              <div className="table-wrap" style={{ marginTop: "16px" }}>
+              <div className="table-wrap">
                 <table>
                   <thead>
                     <tr>
                       {tableHeaders.map((header) => (
-                        <th key={header} onClick={() => handleSort(header)}>
-                          {header}
-                          {sortConfig.key === header
-                            ? sortConfig.direction === "asc"
-                              ? " ↑"
-                              : " ↓"
-                            : ""}
-                        </th>
+                        <th key={header}>{header}</th>
                       ))}
                     </tr>
                   </thead>
@@ -2514,33 +2041,32 @@ export default function App() {
                 </table>
               </div>
 
-              <div className="pagination-bar">
-                <div style={{ color: isDark ? "#cbd5e1" : "#475569", fontSize: "15px" }}>
-                  Page {safeCurrentPage} of {totalPages} | Showing {visibleRows.length} of {filteredRows.length} rows
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: "12px",
+                  marginTop: "18px",
+                  flexWrap: "wrap",
+                }}
+              >
+                <div style={{ color: "#cbd5e1", fontSize: "15px" }}>
+                  Page {safeCurrentPage} of {totalPages}
                 </div>
 
-                <div className="page-pills">
+                <div style={{ display: "flex", gap: "10px" }}>
                   <button
                     className="btn"
                     onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                     disabled={safeCurrentPage === 1}
                     style={{
                       background: "linear-gradient(135deg, #334155, #1e293b)",
-                      padding: "10px 16px",
+                      padding: "12px 18px",
                     }}
                   >
                     Prev
                   </button>
-
-                  {pageNumbers.map((page) => (
-                    <button
-                      key={page}
-                      className={`page-btn ${safeCurrentPage === page ? "active" : ""}`}
-                      onClick={() => setCurrentPage(page)}
-                    >
-                      {page}
-                    </button>
-                  ))}
 
                   <button
                     className="btn"
@@ -2550,25 +2076,12 @@ export default function App() {
                     disabled={safeCurrentPage === totalPages}
                     style={{
                       background: "linear-gradient(135deg, #6d5dfc, #8b5cf6)",
-                      padding: "10px 16px",
+                      padding: "12px 18px",
                     }}
                   >
                     Next
                   </button>
                 </div>
-
-                <select
-                  className="page-select"
-                  style={{ maxWidth: "140px" }}
-                  value={safeCurrentPage}
-                  onChange={(e) => setCurrentPage(Number(e.target.value))}
-                >
-                  {pageNumbers.map((page) => (
-                    <option key={page} value={page}>
-                      Page {page}
-                    </option>
-                  ))}
-                </select>
               </div>
             </section>
           )}
