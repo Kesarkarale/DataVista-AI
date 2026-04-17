@@ -1,0 +1,11 @@
+ product,region,month,sales
+Laptop,West,Jan,20000
+Mobile,East,Feb,15000
+Keyboard,North,Mar,5000
+Mouse,South,Apr,3000
+Headphones,West,May,7000
+Tablet,East,Jun,12000
+Monitor,North,Jul,9000
+Speaker,South,Aug,4000
+Printer,West,Sep,6000
+Camera,East,Oct,11000
