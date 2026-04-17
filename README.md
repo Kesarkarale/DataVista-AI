@@ -69,11 +69,11 @@ Monitor,9000,Jul,North
 
 ## 📸 Screenshots
 
-Login Page
-![Login Page](LoginPage.png)
-
 SignUp Page
 ![SignUp Page](SignPage.png)
+
+Login Page
+![Login Page](LoginPage.png)
   
 Dashboard Overview
 ![Dashboard Overview](DashboardOverview.png)
