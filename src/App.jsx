@@ -211,36 +211,36 @@ export default function App() {
       return [];
     }
 
-    if (chartType === "top") {
-      return sortedBySales.slice(0, 5).map((item) => ({
-        name: String(item[productHeader]),
-        value: item[salesHeader],
-      }));
-    }
+   if (chartType === "top") {
+  return sortedBySales.slice(0, rowsPerPage).map((item) => ({
+    name: String(item[productHeader]),
+    value: item[salesHeader],
+  }));
+}
 
-    if (chartType === "lowest") {
-      return [...sortedBySales]
-        .slice(-5)
-        .reverse()
-        .map((item) => ({
-          name: String(item[productHeader]),
-          value: item[salesHeader],
-        }));
-    }
+if (chartType === "lowest") {
+  return [...sortedBySales]
+    .slice(-rowsPerPage)
+    .reverse()
+    .map((item) => ({
+      name: String(item[productHeader]),
+      value: item[salesHeader],
+    }));
+}
 
     if (chartType === "average") {
-      return rows.slice(0, 5).map((row) => ({
-        name: String(row[productHeader]),
-        value: averageSales,
-      }));
-    }
+     return rows.slice(0, rowsPerPage).map((row) => ({
+     name: String(row[productHeader]),
+     value: averageSales,
+     }));
+   }
 
     if (chartType === "total") {
-      return rows.slice(0, 5).map((row) => ({
-        name: String(row[productHeader]),
-        value: totalSales,
-      }));
-    }
+    return rows.slice(0, rowsPerPage).map((row) => ({
+    name: String(row[productHeader]),
+    value: totalSales,
+    }));
+   }
 
     if (chartType === "region") {
       return regionData;
@@ -263,6 +263,7 @@ export default function App() {
     totalSales,
     regionData,
     monthData,
+    rowsPerPage,
   ]);
 
   const filteredRows = useMemo(() => {
