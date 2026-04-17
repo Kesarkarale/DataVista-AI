@@ -1105,9 +1105,11 @@ export default function App() {
   if (!loggedIn) {
     return (
       <>
- <style>{`
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+<style>{`
+  * { box-sizing: border-box; margin: 0; padding: 0; transition: all 0.3s ease; }
+
   html, body, #root { min-height: 100%; }
+
   body {
     font-family: Inter, Arial, sans-serif;
     background:
@@ -1123,7 +1125,7 @@ export default function App() {
     align-items: center;
     justify-content: center;
     padding: 24px;
-    animation: pageFade 0.9s ease;
+    animation: pageEnter 1s cubic-bezier(.22,1,.36,1);
   }
 
   .auth-card {
@@ -1134,12 +1136,12 @@ export default function App() {
     border-radius: 30px;
     padding: 34px 28px;
     box-shadow: 0 16px 42px rgba(0, 0, 0, 0.28);
-    animation: authCardIn 0.85s cubic-bezier(.22,1,.36,1);
+    animation: authCardIn 1.1s cubic-bezier(.22,1,.36,1);
   }
 
   .auth-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 22px 48px rgba(0, 0, 0, 0.34);
+    transform: translateY(-6px) scale(1.02);
+    box-shadow: 0 26px 55px rgba(0, 0, 0, 0.4);
   }
 
   .auth-logo {
@@ -1153,7 +1155,7 @@ export default function App() {
     font-size: 30px;
     background: linear-gradient(135deg, #7c4dff, #ff4da6);
     box-shadow: 0 12px 30px rgba(124, 77, 255, 0.35);
-    animation: floatGlow 3s ease-in-out infinite;
+    animation: floatStrong 2s ease-in-out infinite;
   }
 
   .auth-title {
@@ -1167,49 +1169,8 @@ export default function App() {
   .auth-subtitle {
     text-align: center;
     color: #c7d2fe;
-    line-height: 1.6;
     margin-bottom: 24px;
-    font-size: 15px;
-    animation: fadeSlideUp 0.95s ease;
-  }
-
-  .auth-message {
-    margin-bottom: 16px;
-    padding: 14px 16px;
-    border-radius: 14px;
-    font-size: 14px;
-    font-weight: 600;
-    text-align: center;
-    animation: fadeSlideUp 0.35s ease;
-  }
-
-  .auth-message.error {
-    background: rgba(239, 68, 68, 0.12);
-    border: 1px solid rgba(239, 68, 68, 0.35);
-    color: #fecaca;
-  }
-
-  .auth-message.success {
-    background: rgba(34, 197, 94, 0.12);
-    border: 1px solid rgba(34, 197, 94, 0.35);
-    color: #bbf7d0;
-  }
-
-  .form-group {
-    margin-bottom: 16px;
-    animation: fadeSlideUp 0.7s ease;
-  }
-
-  .label {
-    display: block;
-    margin-bottom: 8px;
-    color: #e5e7eb;
-    font-weight: 700;
-    font-size: 14px;
-  }
-
-  .input-wrap {
-    position: relative;
+    animation: fadeSlideUp 1s ease;
   }
 
   .input {
@@ -1222,128 +1183,57 @@ export default function App() {
     padding: 0 18px;
     font-size: 15px;
     outline: none;
-    transition:
-      transform 0.22s ease,
-      border-color 0.22s ease,
-      box-shadow 0.22s ease,
-      background 0.22s ease;
-  }
-
-  .input.password {
-    padding-right: 70px;
-  }
-
-  .input::placeholder { color: #92a0d3; }
-
-  .input:hover {
-    background: rgba(255,255,255,0.08);
   }
 
   .input:focus {
-    border-color: rgba(129, 140, 248, 0.7);
-    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
-    transform: scale(1.02);
-  }
-
-  .toggle-password {
-    position: absolute;
-    right: 14px;
-    top: 50%;
-    transform: translateY(-50%);
-    border: none;
-    background: transparent;
-    color: #c7d2fe;
-    cursor: pointer;
-    font-weight: 700;
-    transition: color 0.2s ease, transform 0.2s ease;
-  }
-
-  .toggle-password:hover {
-    color: white;
-    transform: translateY(-50%) scale(1.06);
+    transform: scale(1.05);
+    box-shadow: 0 0 0 6px rgba(99,102,241,0.2);
   }
 
   .auth-btn {
     width: 100%;
     height: 56px;
-    border: none;
     border-radius: 16px;
     background: linear-gradient(135deg, #6d5dfc, #8b5cf6);
     color: white;
     font-size: 16px;
     font-weight: 800;
     cursor: pointer;
-    transition: transform 0.24s ease, box-shadow 0.24s ease, filter 0.24s ease;
-    margin-top: 8px;
     position: relative;
     overflow: hidden;
   }
 
-  .auth-btn::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(120deg, transparent, rgba(255,255,255,0.22), transparent);
-    transform: translateX(-120%);
-    transition: transform 0.6s ease;
-  }
-
   .auth-btn:hover {
-    transform: translateY(-3px) scale(1.01);
-    box-shadow: 0 16px 36px rgba(109, 93, 252, 0.38);
-    filter: brightness(1.03);
-  }
-
-  .auth-btn:hover::after {
-    transform: translateX(120%);
+    transform: translateY(-6px) scale(1.05);
+    box-shadow: 0 20px 45px rgba(124,77,255,0.5);
   }
 
   .auth-btn:active {
-    transform: scale(0.97);
+    transform: scale(0.94);
   }
 
-  .switch-auth {
-    margin-top: 18px;
-    text-align: center;
-    color: #c7d2fe;
-    font-size: 14px;
-    animation: fadeSlideUp 1.05s ease;
-  }
+  /* ANIMATIONS */
 
-  .switch-link {
-    color: #a78bfa;
-    font-weight: 700;
-    cursor: pointer;
-    margin-left: 6px;
-    transition: color 0.2s ease, letter-spacing 0.2s ease;
-  }
-
-  .switch-link:hover {
-    color: #c4b5fd;
-    letter-spacing: 0.2px;
-  }
-
-  @keyframes pageFade {
-    from { opacity: 0; }
-    to { opacity: 1; }
+  @keyframes pageEnter {
+    from { opacity: 0; transform: translateY(60px) scale(0.9); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
   }
 
   @keyframes authCardIn {
-    from { opacity: 0; transform: translateY(30px) scale(0.95); }
+    from { opacity: 0; transform: translateY(70px) scale(0.85); }
     to { opacity: 1; transform: translateY(0) scale(1); }
   }
 
   @keyframes fadeSlideUp {
-    from { opacity: 0; transform: translateY(16px); }
+    from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
   }
 
-  @keyframes floatGlow {
-    0%, 100% { transform: translateY(0); box-shadow: 0 12px 30px rgba(124, 77, 255, 0.35); }
-    50% { transform: translateY(-4px); box-shadow: 0 18px 36px rgba(124, 77, 255, 0.45); }
+  @keyframes floatStrong {
+    0%,100% { transform: translateY(0); }
+    50% { transform: translateY(-12px) scale(1.08); }
   }
 `}</style>
-
         <div className="auth-page">
           <div className="auth-card">
             <div className="auth-logo">✦</div>
@@ -1458,7 +1348,7 @@ export default function App() {
 
   return (
     <>
-  <style>{`
+ <style>{`
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body, #root { min-height: 100%; }
   body {
@@ -1473,7 +1363,7 @@ export default function App() {
   .app {
     min-height: 100vh;
     padding: 28px 18px 60px;
-    animation: appEnter .85s cubic-bezier(.22,1,.36,1);
+    animation: appEnter 1.1s cubic-bezier(.22,1,.36,1);
   }
 
   .container {
@@ -1487,19 +1377,20 @@ export default function App() {
     border: 1px solid rgba(102, 126, 234, 0.22);
     border-radius: 30px;
     box-shadow: 0 14px 40px rgba(0,0,0,0.22);
-    transition: transform 0.28s ease, box-shadow 0.28s ease, border-color 0.28s ease;
+    transition: transform 0.34s ease, box-shadow 0.34s ease, border-color 0.34s ease;
+    animation: panelPop 1s cubic-bezier(.22,1,.36,1);
   }
 
   .panel:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 24px 54px rgba(0,0,0,0.28);
-    border-color: rgba(129, 140, 248, 0.28);
+    transform: translateY(-8px) scale(1.01);
+    box-shadow: 0 28px 62px rgba(0,0,0,0.34);
+    border-color: rgba(129, 140, 248, 0.34);
   }
 
   .hero {
     padding: 34px 34px 30px;
     margin-bottom: 24px;
-    animation: fadeSlideUp .75s ease;
+    animation: fadeSlideUp 0.85s ease;
   }
 
   .hero-header {
@@ -1527,7 +1418,7 @@ export default function App() {
     background: linear-gradient(135deg, #7c4dff, #ff4da6);
     box-shadow: 0 12px 30px rgba(124, 77, 255, 0.35);
     font-size: 28px;
-    animation: floatGlow 3s ease-in-out infinite;
+    animation: floatStrong 2.1s ease-in-out infinite;
   }
 
   .hero-title h1 {
@@ -1535,7 +1426,7 @@ export default function App() {
     line-height: 1;
     font-weight: 800;
     letter-spacing: -1.2px;
-    animation: fadeSlideUp .8s ease;
+    animation: fadeSlideUp .95s ease;
   }
 
   .hero-title p {
@@ -1543,7 +1434,7 @@ export default function App() {
     font-size: 17px;
     color: #c7d2fe;
     max-width: 780px;
-    animation: fadeSlideUp .95s ease;
+    animation: fadeSlideUp 1.1s ease;
   }
 
   .logout-btn {
@@ -1555,17 +1446,17 @@ export default function App() {
     font-size: 15px;
     font-weight: 800;
     cursor: pointer;
-    transition: transform 0.24s ease, box-shadow 0.24s ease, filter 0.24s ease;
+    transition: transform 0.28s ease, box-shadow 0.28s ease, filter 0.28s ease;
   }
 
   .logout-btn:hover {
-    transform: translateY(-3px) scale(1.01);
-    box-shadow: 0 16px 34px rgba(239, 68, 68, 0.28);
-    filter: brightness(1.03);
+    transform: translateY(-5px) scale(1.04);
+    box-shadow: 0 18px 38px rgba(239, 68, 68, 0.34);
+    filter: brightness(1.05);
   }
 
   .logout-btn:active {
-    transform: scale(0.97);
+    transform: scale(0.94);
   }
 
   .hero-grid {
@@ -1580,7 +1471,7 @@ export default function App() {
     border: 1px solid rgba(122, 142, 255, 0.22);
     background: linear-gradient(135deg, rgba(56,47,120,.45), rgba(17,31,78,.45));
     min-height: 190px;
-    animation: fadeSlideUp .85s ease;
+    animation: fadeSlideUp 0.95s ease;
   }
 
   .upload-inner {
@@ -1593,20 +1484,20 @@ export default function App() {
     border-radius: 20px;
     padding: 22px;
     cursor: pointer;
-    transition: transform .28s ease, border-color .28s ease, box-shadow .28s ease, background .28s ease;
+    transition: transform .32s ease, border-color .32s ease, box-shadow .32s ease, background .32s ease;
   }
 
   .upload-inner:hover {
-    transform: translateY(-3px) scale(1.01);
-    border-color: rgba(167,139,250,.55);
-    box-shadow: 0 0 0 6px rgba(99,102,241,.08);
-    background: rgba(255,255,255,.02);
+    transform: translateY(-6px) scale(1.03);
+    border-color: rgba(167,139,250,.62);
+    box-shadow: 0 0 0 8px rgba(99,102,241,.10);
+    background: rgba(255,255,255,.03);
   }
 
   .upload-icon {
     font-size: 28px;
     margin-bottom: 12px;
-    animation: floatSoft 2.8s ease-in-out infinite;
+    animation: floatStrong 2.4s ease-in-out infinite;
   }
 
   .upload-inner h3 {
@@ -1657,7 +1548,7 @@ export default function App() {
     color: #d1fae5;
     font-weight: 700;
     font-size: 18px;
-    animation: fadeSlideUp .9s ease;
+    animation: fadeSlideUp 1s ease;
   }
 
   .dataset-pill.empty {
@@ -1675,7 +1566,7 @@ export default function App() {
     border: 1px solid rgba(239, 68, 68, 0.35);
     color: #fecaca;
     font-weight: 600;
-    animation: fadeSlideUp .35s ease;
+    animation: fadeSlideUp .45s ease;
   }
 
   .dot {
@@ -1684,7 +1575,7 @@ export default function App() {
     border-radius: 50%;
     background: #22c55e;
     box-shadow: 0 0 10px #22c55e;
-    animation: pulseDot 1.8s ease-in-out infinite;
+    animation: pulseDot 1.2s ease-in-out infinite;
   }
 
   .button-row {
@@ -1702,7 +1593,7 @@ export default function App() {
     font-weight: 700;
     cursor: pointer;
     color: white;
-    transition: transform .24s ease, box-shadow .24s ease, filter .24s ease;
+    transition: transform .28s ease, box-shadow .28s ease, filter .28s ease;
     position: relative;
     overflow: hidden;
   }
@@ -1711,23 +1602,23 @@ export default function App() {
     content: "";
     position: absolute;
     inset: 0;
-    background: linear-gradient(120deg, transparent, rgba(255,255,255,0.18), transparent);
-    transform: translateX(-120%);
-    transition: transform 0.6s ease;
+    background: linear-gradient(120deg, transparent, rgba(255,255,255,0.24), transparent);
+    transform: translateX(-130%);
+    transition: transform 0.7s ease;
   }
 
   .btn:hover {
-    transform: translateY(-3px) scale(1.01);
-    box-shadow: 0 15px 35px rgba(0,0,0,.22);
-    filter: brightness(1.03);
+    transform: translateY(-6px) scale(1.04);
+    box-shadow: 0 20px 42px rgba(0,0,0,.26);
+    filter: brightness(1.05);
   }
 
   .btn:hover::after {
-    transform: translateX(120%);
+    transform: translateX(130%);
   }
 
   .btn:active {
-    transform: scale(0.97);
+    transform: scale(0.93);
   }
 
   .btn:disabled {
@@ -1761,7 +1652,7 @@ export default function App() {
   .summary, .ask-panel, .chart-panel, .table-panel {
     padding: 28px;
     margin-bottom: 22px;
-    animation: riseUp .7s ease;
+    animation: riseUp .9s ease;
   }
 
   .section-title {
@@ -1788,14 +1679,14 @@ export default function App() {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    animation: popIn .6s ease;
-    transition: transform .24s ease, box-shadow .24s ease, border-color .24s ease;
+    animation: statPop .95s cubic-bezier(.22,1,.36,1);
+    transition: transform .28s ease, box-shadow .28s ease, border-color .28s ease;
   }
 
   .stat-card:hover {
-    transform: translateY(-4px) scale(1.01);
-    box-shadow: 0 16px 34px rgba(0,0,0,.22);
-    border-color: rgba(129,140,248,.34);
+    transform: translateY(-8px) scale(1.04);
+    box-shadow: 0 20px 40px rgba(0,0,0,.24);
+    border-color: rgba(129,140,248,.38);
   }
 
   .stat-card h4 {
@@ -1823,12 +1714,12 @@ export default function App() {
     border: 1px solid rgba(111,133,221,.22);
     padding: 22px;
     min-height: 170px;
-    transition: transform .24s ease, box-shadow .24s ease;
+    transition: transform .28s ease, box-shadow .28s ease;
   }
 
   .mini-panel:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 14px 28px rgba(0,0,0,.18);
+    transform: translateY(-5px);
+    box-shadow: 0 16px 32px rgba(0,0,0,.20);
   }
 
   .mini-panel h3 {
@@ -1850,12 +1741,12 @@ export default function App() {
     border-radius: 14px;
     padding: 12px 14px;
     line-height: 1.55;
-    transition: transform .22s ease, background .22s ease;
+    transition: transform .24s ease, background .24s ease;
   }
 
   .mini-panel li:hover {
-    transform: translateX(4px);
-    background: rgba(255,255,255,.05);
+    transform: translateX(6px);
+    background: rgba(255,255,255,.06);
   }
 
   .ask-title {
@@ -1886,7 +1777,7 @@ export default function App() {
     padding: 0 20px;
     font-size: 16px;
     outline: none;
-    transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease, background .22s ease;
+    transition: transform .24s ease, border-color .24s ease, box-shadow .24s ease, background .24s ease;
   }
 
   .rows-input {
@@ -1902,9 +1793,9 @@ export default function App() {
   }
 
   .query-input:focus, .table-search:focus, .rows-select:focus, .filter-select:focus, .rows-input:focus {
-    transform: scale(1.015);
-    border-color: rgba(129,140,248,.55);
-    box-shadow: 0 0 0 4px rgba(99,102,241,.10);
+    transform: scale(1.04);
+    border-color: rgba(129,140,248,.62);
+    box-shadow: 0 0 0 5px rgba(99,102,241,.14);
   }
 
   .filter-select option, .rows-select option {
@@ -1933,13 +1824,13 @@ export default function App() {
     padding: 11px 16px;
     cursor: pointer;
     font-size: 15px;
-    transition: transform .24s ease, background .24s ease, box-shadow .24s ease;
+    transition: transform .26s ease, background .26s ease, box-shadow .26s ease;
   }
 
   .chip:hover {
-    transform: translateY(-2px) scale(1.01);
-    background: rgba(94,110,218,.16);
-    box-shadow: 0 8px 16px rgba(0,0,0,.12);
+    transform: translateY(-4px) scale(1.03);
+    background: rgba(94,110,218,.18);
+    box-shadow: 0 10px 18px rgba(0,0,0,.14);
   }
 
   .info-box {
@@ -1953,7 +1844,7 @@ export default function App() {
     color: #d7e3ff;
     font-size: 18px;
     line-height: 1.55;
-    animation: fadeSlideUp .65s ease;
+    animation: fadeSlideUp .75s ease;
   }
 
   .result-card {
@@ -1964,7 +1855,7 @@ export default function App() {
     background: linear-gradient(180deg, rgba(16,185,129,.12), rgba(59,130,246,.10));
     border: 1px solid rgba(99,102,241,.25);
     text-align: center;
-    animation: resultReveal .45s ease;
+    animation: resultReveal .6s ease;
   }
 
   .result-card h3 {
@@ -1995,12 +1886,12 @@ export default function App() {
     background: rgba(255,255,255,.06);
     border: 1px solid rgba(255,255,255,.08);
     color: #e5e7eb;
-    transition: transform .22s ease, background .22s ease;
+    transition: transform .24s ease, background .24s ease;
   }
 
   .recent-pill:hover {
-    transform: translateY(-2px);
-    background: rgba(255,255,255,.10);
+    transform: translateY(-3px);
+    background: rgba(255,255,255,.12);
   }
 
   .small-meta {
@@ -2021,7 +1912,7 @@ export default function App() {
     border: 1px solid rgba(129, 140, 248, 0.35);
     font-weight: 700;
     letter-spacing: .4px;
-    animation: pulse 1.2s infinite;
+    animation: pulseStrong 0.85s infinite;
   }
 
   .typing {
@@ -2058,7 +1949,7 @@ export default function App() {
     margin: 10px 0 8px;
     color: #e7ebff;
     font-size: 18px;
-    animation: fadeSlideUp .55s ease;
+    animation: fadeSlideUp .65s ease;
   }
 
   .legend-box {
@@ -2125,14 +2016,14 @@ export default function App() {
     border-radius: 16px 16px 0 0;
     background: linear-gradient(180deg, #7068f3, #5b61e8);
     box-shadow: 0 14px 30px rgba(92,97,232,.25);
-    transition: height 1.2s cubic-bezier(.22,1,.36,1), transform .22s ease, filter .22s ease;
+    transition: height 1.4s cubic-bezier(.22,1,.36,1), transform .24s ease, filter .24s ease;
     position: relative;
     z-index: 2;
   }
 
   .bar:hover {
-    transform: scaleY(1.02);
-    filter: brightness(1.05);
+    transform: scaleY(1.05);
+    filter: brightness(1.08);
   }
 
   .bar-label-x {
@@ -2174,11 +2065,11 @@ export default function App() {
     border-radius: 999px;
     background: linear-gradient(180deg, #60a5fa, #8b5cf6);
     box-shadow: 0 8px 18px rgba(96,165,250,.25);
-    transition: height .9s ease, transform .22s ease;
+    transition: height .9s ease, transform .24s ease;
   }
 
   .line-stick:hover {
-    transform: scaleY(1.03);
+    transform: scaleY(1.06);
   }
 
   .line-value {
@@ -2212,7 +2103,7 @@ export default function App() {
     box-shadow: inset 0 0 0 16px rgba(10,16,34,.9);
     position: relative;
     overflow: hidden;
-    animation: popIn .65s ease;
+    animation: statPop .8s ease;
   }
 
   .pie-hole {
@@ -2252,12 +2143,12 @@ export default function App() {
     border-radius: 14px;
     background: rgba(255,255,255,.04);
     border: 1px solid rgba(255,255,255,.06);
-    transition: transform .22s ease, background .22s ease;
+    transition: transform .24s ease, background .24s ease;
   }
 
   .pie-item:hover {
-    transform: translateX(4px);
-    background: rgba(255,255,255,.06);
+    transform: translateX(6px) scale(1.01);
+    background: rgba(255,255,255,.07);
   }
 
   .pie-left {
@@ -2317,7 +2208,7 @@ export default function App() {
     margin-bottom: 14px;
     color: #cbd5e1;
     font-size: 15px;
-    animation: fadeSlideUp .5s ease;
+    animation: fadeSlideUp .65s ease;
   }
 
   .table-wrap {
@@ -2336,7 +2227,7 @@ export default function App() {
     text-align: left;
     border-bottom: 1px solid rgba(255,255,255,.07);
     font-size: 15px;
-    transition: background .22s ease, transform .22s ease;
+    transition: background .24s ease, transform .24s ease;
   }
 
   th {
@@ -2349,7 +2240,7 @@ export default function App() {
   }
 
   th:hover {
-    background: rgba(255,255,255,.05);
+    background: rgba(255,255,255,.06);
   }
 
   td {
@@ -2357,8 +2248,8 @@ export default function App() {
   }
 
   tr:hover td {
-    background: rgba(124,77,255,0.10);
-    transform: scale(1.005);
+    background: rgba(124,77,255,0.15);
+    transform: scale(1.01);
   }
 
   .sort-icon {
@@ -2392,18 +2283,18 @@ export default function App() {
     color: white;
     cursor: pointer;
     font-weight: 700;
-    transition: transform .22s ease, background .22s ease, box-shadow .22s ease;
+    transition: transform .24s ease, background .24s ease, box-shadow .24s ease;
   }
 
   .page-number:hover {
-    transform: translateY(-2px);
-    background: rgba(255,255,255,.08);
+    transform: translateY(-3px) scale(1.04);
+    background: rgba(255,255,255,.10);
   }
 
   .page-number.active {
     background: linear-gradient(135deg, #6d5dfc, #8b5cf6);
     border-color: transparent;
-    box-shadow: 0 10px 18px rgba(109, 93, 252, 0.25);
+    box-shadow: 0 12px 22px rgba(109, 93, 252, 0.3);
   }
 
   .page-number.dots {
@@ -2412,53 +2303,53 @@ export default function App() {
   }
 
   @keyframes appEnter {
-    from { opacity: 0; transform: translateY(20px) scale(0.98); }
+    from { opacity: 0; transform: translateY(50px) scale(0.92); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  @keyframes panelPop {
+    from { opacity: 0; transform: translateY(60px) scale(0.9); }
     to { opacity: 1; transform: translateY(0) scale(1); }
   }
 
   @keyframes fadeSlideUp {
-    from { opacity: 0; transform: translateY(14px); }
+    from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
   }
 
   @keyframes riseUp {
-    from { opacity: 0; transform: translateY(16px); }
+    from { opacity: 0; transform: translateY(24px); }
     to { opacity: 1; transform: translateY(0); }
   }
 
   @keyframes bounce {
     0%, 80%, 100% { transform: translateY(0); opacity: .7; }
-    40% { transform: translateY(-6px); opacity: 1; }
+    40% { transform: translateY(-8px); opacity: 1; }
   }
 
-  @keyframes pulse {
-    0% { opacity: 0.65; }
-    50% { opacity: 1; }
-    100% { opacity: 0.65; }
+  @keyframes pulseStrong {
+    0% { opacity: 0.5; transform: scale(0.96); }
+    50% { opacity: 1; transform: scale(1.05); }
+    100% { opacity: 0.5; transform: scale(0.96); }
   }
 
-  @keyframes popIn {
-    from { opacity: 0; transform: scale(0.92); }
-    to { opacity: 1; transform: scale(1); }
+  @keyframes statPop {
+    from { opacity: 0; transform: scale(0.75) translateY(40px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
   }
 
   @keyframes pulseDot {
     0%, 100% { transform: scale(1); opacity: 0.9; }
-    50% { transform: scale(1.2); opacity: 1; }
+    50% { transform: scale(1.35); opacity: 1; }
   }
 
-  @keyframes floatGlow {
-    0%, 100% { transform: translateY(0); box-shadow: 0 12px 30px rgba(124, 77, 255, 0.35); }
-    50% { transform: translateY(-4px); box-shadow: 0 18px 36px rgba(124, 77, 255, 0.45); }
-  }
-
-  @keyframes floatSoft {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-4px); }
+  @keyframes floatStrong {
+    0%,100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-12px) scale(1.08); }
   }
 
   @keyframes resultReveal {
-    from { opacity: 0; transform: scale(0.96) translateY(10px); }
+    from { opacity: 0; transform: scale(0.92) translateY(18px); }
     to { opacity: 1; transform: scale(1) translateY(0); }
   }
 
