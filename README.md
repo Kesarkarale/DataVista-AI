@@ -69,22 +69,21 @@ Monitor,9000,Jul,North
 
 ## 📸 Screenshots
 
-*Add your screenshots here*
-
 * Login Page
-  ![Login Page](login.png)
+  ![Login Page](LoginPage.png)
   
 * Dashboard Overview
-  ![Dashboard Overview](dashboard.png)
-  ![Dashboard Overview](data.png)
+  ![Dashboard Overview](DashboardOverview.png)
+  ![Dashboard Overview2](DashboardOverview2.png)
+  
 * Dataset Summary
-   ![Dataset Summary](dataset.png)
+   ![Dataset Summary](DatasetSummary.png)
   
 * Charts View
-![Charts View](charts.png)
+![Charts View](ChartsView.png)
   
 * Table with Filters & Pagination
-![Table with Filters & Pagination](table.png)
+![Table with Filters & Pagination](TablewithFilters&Pagination.png)
 
 ---
 
