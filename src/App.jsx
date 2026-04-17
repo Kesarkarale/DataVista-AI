@@ -379,80 +379,82 @@ if (chartType === "lowest") {
     return () => clearTimeout(timer);
   }, [chartData, chartType]);
 
-  const handleSignup = (e) => {
-    e.preventDefault();
+ const handleSignup = (e) => {
+  e.preventDefault();
 
-    const cleanName = name.trim();
-    const cleanEmail = email.trim().toLowerCase();
-    const cleanPassword = password.trim();
+  const cleanName = name.trim();
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanPassword = password.trim();
 
-    if (!cleanName || !cleanEmail || !cleanPassword) {
-      setAuthMessage("Please fill all fields.");
-      setAuthMessageType("error");
-      return;
-    }
+  if (!cleanName || !cleanEmail || !cleanPassword) {
+    setAuthMessage("Please fill all fields.");
+    setAuthMessageType("error");
+    return;
+  }
 
-    const exists = users.find((u) => u.email === cleanEmail);
-    if (exists) {
-      setAuthMessage("Account already exists with this email.");
-      setAuthMessageType("error");
-      return;
-    }
+  const exists = users.find((u) => u.email === cleanEmail);
+  if (exists) {
+    setAuthMessage("Account already exists with this email.");
+    setAuthMessageType("error");
+    return;
+  }
 
-    const newUser = {
-      name: cleanName,
-      email: cleanEmail,
-      password: cleanPassword,
-    };
-
-    const updatedUsers = [...users, newUser];
-    setUsers(updatedUsers);
-    localStorage.setItem("datavista_users", JSON.stringify(updatedUsers));
-
-    setAuthMessage("Account created successfully.");
-    setAuthMessageType("success");
-
-    setName(cleanName);
-    setLoggedIn(true);
-    setPassword("");
-
-    localStorage.setItem("datavista_current_user", cleanName);
-    setCurrentUser(cleanName);
+  const newUser = {
+    name: cleanName,
+    email: cleanEmail,
+    password: cleanPassword,
   };
 
-  const handleLogin = (e) => {
-    e.preventDefault();
+  const updatedUsers = [...users, newUser];
+  setUsers(updatedUsers);
+  localStorage.setItem("datavista_users", JSON.stringify(updatedUsers));
 
-    const cleanEmail = email.trim().toLowerCase();
-    const cleanPassword = password.trim();
+  // success message
+  setAuthMessage("Account created successfully. Please login.");
+  setAuthMessageType("success");
 
-    if (!cleanEmail || !cleanPassword) {
-      setAuthMessage("Please enter email and password.");
-      setAuthMessageType("error");
-      return;
-    }
+  // signup fields clear
+  setName("");
+  setEmail(cleanEmail);
+  setPassword("");
 
-    const user = users.find(
-      (u) => u.email === cleanEmail && u.password === cleanPassword
-    );
+  // back to login page
+  setIsSignup(false);
+};
 
-    if (!user) {
-      setAuthMessage("Invalid email or password.");
-      setAuthMessageType("error");
-      return;
-    }
+ const handleLogin = (e) => {
+  e.preventDefault();
 
-    setAuthMessage("");
-    setAuthMessageType("");
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanPassword = password.trim();
 
-    setName(user.name || "");
-    setLoggedIn(true);
-    setPassword("");
+  if (!cleanEmail || !cleanPassword) {
+    setAuthMessage("Please enter email and password.");
+    setAuthMessageType("error");
+    return;
+  }
 
-    localStorage.setItem("datavista_current_user", user.name);
-    setCurrentUser(user.name);
-  };
+  const user = users.find(
+    (u) => u.email === cleanEmail && u.password === cleanPassword
+  );
 
+  if (!user) {
+    setAuthMessage("Invalid email or password.");
+    setAuthMessageType("error");
+    return;
+  }
+
+  setAuthMessage("");
+  setAuthMessageType("");
+
+  setName(user.name || "");
+  setLoggedIn(true);
+  setPassword("");
+
+  localStorage.setItem("datavista_current_user", user.name);
+  setCurrentUser(user.name);
+};
+  
   const handleLogout = () => {
     setLoggedIn(false);
     setEmail("");
