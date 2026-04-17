@@ -1,34 +1,100 @@
 import { useEffect, useMemo, useState } from "react";
 
+function parseCSVLine(line) {
+  const values = [];
+  let current = "";
+  let insideQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    const next = line[i + 1];
+
+    if (char === '"') {
+      if (insideQuotes && next === '"') {
+        current += '"';
+        i++;
+      } else {
+        insideQuotes = !insideQuotes;
+      }
+    } else if (char === "," && !insideQuotes) {
+      values.push(current.trim());
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+
+  values.push(current.trim());
+  return values;
+}
+
 function parseCSV(text) {
   const lines = text
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
 
-  if (lines.length < 2) return { headers: [], rows: [] };
+  if (!lines.length) {
+    return { headers: [], rows: [], error: "CSV file is empty." };
+  }
 
-  const headers = lines[0].split(",").map((h) => h.trim());
+  if (lines.length < 2) {
+    return {
+      headers: [],
+      rows: [],
+      error: "CSV must contain at least one header row and one data row.",
+    };
+  }
 
-  const rows = lines.slice(1).map((line) => {
-    const values = line.split(",").map((v) => v.trim());
-    const row = {};
+  try {
+    const headers = parseCSVLine(lines[0]).map((h) => h.trim());
 
-    headers.forEach((header, index) => {
-      const raw = values[index] ?? "";
-      const num = Number(raw);
-      row[header] = raw !== "" && !Number.isNaN(num) ? num : raw;
+    if (!headers.length || headers.every((h) => !h)) {
+      return { headers: [], rows: [], error: "CSV headers are invalid." };
+    }
+
+    const rows = lines.slice(1).map((line) => {
+      const values = parseCSVLine(line);
+      const row = {};
+
+      headers.forEach((header, index) => {
+        const raw = values[index] ?? "";
+        const cleaned = String(raw).trim();
+        const numericValue = Number(cleaned);
+
+        row[header] =
+          cleaned !== "" && !Number.isNaN(numericValue) ? numericValue : cleaned;
+      });
+
+      return row;
     });
 
-    return row;
-  });
-
-  return { headers, rows };
+    return { headers, rows, error: "" };
+  } catch {
+    return { headers: [], rows: [], error: "Invalid CSV format." };
+  }
 }
 
 function formatNumber(value) {
   if (typeof value !== "number" || Number.isNaN(value)) return value;
   return new Intl.NumberFormat("en-IN").format(value);
+}
+
+function toCsvContent(headers, rows) {
+  const escapeCell = (value) => {
+    const str = String(value ?? "");
+    if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
+  const headerLine = headers.map(escapeCell).join(",");
+  const rowLines = rows.map((row) =>
+    headers.map((header) => escapeCell(row[header])).join(",")
+  );
+
+  return [headerLine, ...rowLines].join("\n");
 }
 
 function downloadCsv(filename, content) {
@@ -44,7 +110,68 @@ function downloadCsv(filename, content) {
   URL.revokeObjectURL(url);
 }
 
-function getInsightText({
+function normalizeMonth(value) {
+  const monthMap = {
+    jan: 1,
+    january: 1,
+    feb: 2,
+    february: 2,
+    mar: 3,
+    march: 3,
+    apr: 4,
+    april: 4,
+    may: 5,
+    jun: 6,
+    june: 6,
+    jul: 7,
+    july: 7,
+    aug: 8,
+    august: 8,
+    sep: 9,
+    sept: 9,
+    september: 9,
+    oct: 10,
+    october: 10,
+    nov: 11,
+    november: 11,
+    dec: 12,
+    december: 12,
+  };
+
+  const raw = String(value ?? "").trim();
+  const lower = raw.toLowerCase();
+
+  if (monthMap[lower]) {
+    return {
+      label: raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase(),
+      order: monthMap[lower],
+    };
+  }
+
+  const numeric = Number(raw);
+  if (!Number.isNaN(numeric) && numeric >= 1 && numeric <= 12) {
+    const labels = [
+      "",
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
+    return { label: labels[numeric], order: numeric };
+  }
+
+  return { label: raw || "-", order: 999 };
+}
+
+function buildInsightText({
   chartType,
   topProduct,
   lowestProduct,
@@ -58,7 +185,7 @@ function getInsightText({
   if (chartType === "top") {
     return `${
       topProduct?.[productHeader] || "Top product"
-    } is currently the highest performer with sales of ${formatNumber(
+    } is the highest performer with sales of ${formatNumber(
       topProduct?.[salesHeader] || 0
     )}.`;
   }
@@ -100,13 +227,42 @@ function getInsightText({
   return "Analysis generated successfully.";
 }
 
+function getPageNumbers(currentPage, totalPages) {
+  const pages = [];
+
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+    return pages;
+  }
+
+  pages.push(1);
+
+  if (currentPage > 3) pages.push("...");
+
+  const start = Math.max(2, currentPage - 1);
+  const end = Math.min(totalPages - 1, currentPage + 1);
+
+  for (let i = start; i <= end; i++) pages.push(i);
+
+  if (currentPage < totalPages - 2) pages.push("...");
+
+  pages.push(totalPages);
+
+  return pages;
+}
+
 export default function App() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [isSignup, setIsSignup] = useState(false);
 
   const [name, setName] = useState("");
+  const [signupName, setSignupName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [users, setUsers] = useState(() => {
     try {
@@ -118,7 +274,12 @@ export default function App() {
   });
 
   const [currentUser, setCurrentUser] = useState(() => {
-    return localStorage.getItem("datavista_current_user") || "";
+    try {
+      const saved = sessionStorage.getItem("datavista_current_user");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
   });
 
   const [authMessage, setAuthMessage] = useState("");
@@ -127,6 +288,7 @@ export default function App() {
   const [csvText, setCsvText] = useState("");
   const [fileName, setFileName] = useState("");
   const [hasUploaded, setHasUploaded] = useState(false);
+  const [uploadError, setUploadError] = useState("");
 
   const [query, setQuery] = useState("");
   const [activeQuery, setActiveQuery] = useState("");
@@ -143,20 +305,30 @@ export default function App() {
 
   const [tableSearch, setTableSearch] = useState("");
   const [rowsPerPage, setRowsPerPage] = useState(8);
+  const [customRowsInput, setCustomRowsInput] = useState("8");
   const [currentPage, setCurrentPage] = useState(1);
   const [chartType, setChartType] = useState("top");
   const [animateChart, setAnimateChart] = useState(false);
 
-  const { headers, rows } = useMemo(() => parseCSV(csvText), [csvText]);
+  const [sortConfig, setSortConfig] = useState({
+    key: "",
+    direction: "asc",
+  });
+
+  const [regionFilter, setRegionFilter] = useState("all");
+  const [monthFilter, setMonthFilter] = useState("all");
+
+  const parsedData = useMemo(() => parseCSV(csvText), [csvText]);
+  const headers = parsedData.headers;
+  const rows = parsedData.rows;
+  const parsedError = parsedData.error;
 
   const productHeader =
     headers.find((h) => h.toLowerCase().includes("product")) || headers[0] || "";
   const regionHeader =
     headers.find((h) => h.toLowerCase().includes("region")) || "";
-  const monthHeader =
-    headers.find((h) => h.toLowerCase().includes("month")) || "";
-  const salesHeader =
-    headers.find((h) => h.toLowerCase().includes("sales")) || "";
+  const monthHeader = headers.find((h) => h.toLowerCase().includes("month")) || "";
+  const salesHeader = headers.find((h) => h.toLowerCase().includes("sales")) || "";
 
   const totalSales = useMemo(() => {
     if (!salesHeader) return 0;
@@ -190,22 +362,52 @@ export default function App() {
 
   const regionData = useMemo(() => {
     if (!regionHeader || !salesHeader) return [];
+
     const map = {};
     rows.forEach((row) => {
-      const region = row[regionHeader];
+      const region = String(row[regionHeader] ?? "-");
       const sales = typeof row[salesHeader] === "number" ? row[salesHeader] : 0;
       map[region] = (map[region] || 0) + sales;
     });
-    return Object.entries(map).map(([name, value]) => ({ name, value }));
+
+    return Object.entries(map)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
   }, [rows, regionHeader, salesHeader]);
 
   const monthData = useMemo(() => {
     if (!monthHeader || !salesHeader) return [];
-    return rows.map((row) => ({
-      name: String(row[monthHeader]),
-      value: typeof row[salesHeader] === "number" ? row[salesHeader] : 0,
-    }));
+
+    const map = {};
+
+    rows.forEach((row) => {
+      const monthInfo = normalizeMonth(row[monthHeader]);
+      const sales = typeof row[salesHeader] === "number" ? row[salesHeader] : 0;
+
+      if (!map[monthInfo.label]) {
+        map[monthInfo.label] = {
+          name: monthInfo.label,
+          value: 0,
+          order: monthInfo.order,
+        };
+      }
+
+      map[monthInfo.label].value += sales;
+    });
+
+    return Object.values(map).sort((a, b) => a.order - b.order);
   }, [rows, monthHeader, salesHeader]);
+
+  const uniqueRegionOptions = useMemo(() => {
+    if (!regionHeader) return [];
+    return [...new Set(rows.map((row) => String(row[regionHeader] ?? "-")))].sort();
+  }, [rows, regionHeader]);
+
+  const uniqueMonthOptions = useMemo(() => {
+    if (!monthHeader) return [];
+    const items = [...new Set(rows.map((row) => normalizeMonth(row[monthHeader]).label))];
+    return items.sort((a, b) => normalizeMonth(a).order - normalizeMonth(b).order);
+  }, [rows, monthHeader]);
 
   const chartData = useMemo(() => {
     if (!hasUploaded || !hasAnalyzed || !rows.length || !productHeader || !salesHeader) {
@@ -213,7 +415,7 @@ export default function App() {
     }
 
     if (chartType === "top") {
-      return sortedBySales.slice(0, rowsPerPage).map((item) => ({
+      return sortedBySales.slice(0, Math.min(rowsPerPage, 10)).map((item) => ({
         name: String(item[productHeader]),
         value: item[salesHeader],
       }));
@@ -221,7 +423,7 @@ export default function App() {
 
     if (chartType === "lowest") {
       return [...sortedBySales]
-        .slice(-rowsPerPage)
+        .slice(-Math.min(rowsPerPage, 10))
         .reverse()
         .map((item) => ({
           name: String(item[productHeader]),
@@ -230,14 +432,14 @@ export default function App() {
     }
 
     if (chartType === "average") {
-      return rows.slice(0, rowsPerPage).map((row) => ({
+      return rows.slice(0, Math.min(rowsPerPage, 10)).map((row) => ({
         name: String(row[productHeader]),
         value: averageSales,
       }));
     }
 
     if (chartType === "total") {
-      return rows.slice(0, rowsPerPage).map((row) => ({
+      return rows.slice(0, Math.min(rowsPerPage, 10)).map((row) => ({
         name: String(row[productHeader]),
         value: totalSales,
       }));
@@ -267,40 +469,27 @@ export default function App() {
     rowsPerPage,
   ]);
 
-  const filteredRows = useMemo(() => {
-    if (!rows.length) return [];
-
+  const analyzedRows = useMemo(() => {
     const q = activeQuery.trim().toLowerCase();
-    const ts = tableSearch.trim().toLowerCase();
 
-    if (ts) {
-      return rows.filter((row) =>
-        headers.some((header) =>
-          String(row[header] ?? "").toLowerCase().includes(ts)
-        )
-      );
-    }
+    if (!hasAnalyzed) return rows;
 
-    if (!hasAnalyzed) {
-      return rows;
-    }
-
-    if (q.includes("top")) {
+    if (q.includes("top") || q.includes("best") || q.includes("highest")) {
       return sortedBySales.slice(0, 5);
     }
 
-    if (q.includes("lowest")) {
+    if (q.includes("lowest") || q.includes("minimum") || q.includes("worst")) {
       return [...sortedBySales].slice(-5).reverse();
     }
 
-    if (q.includes("average")) {
+    if (q.includes("average") || q.includes("mean")) {
       return rows.map((row) => ({
         ...row,
         [salesHeader]: Number(averageSales.toFixed(2)),
       }));
     }
 
-    if (q.includes("total")) {
+    if (q.includes("total") || q.includes("sum")) {
       return rows.map((row) => ({
         ...row,
         [salesHeader]: totalSales,
@@ -327,15 +516,13 @@ export default function App() {
 
     return rows;
   }, [
-    rows,
-    headers,
     activeQuery,
-    tableSearch,
     hasAnalyzed,
+    rows,
     sortedBySales,
+    salesHeader,
     averageSales,
     totalSales,
-    salesHeader,
     regionData,
     monthData,
     productHeader,
@@ -343,21 +530,66 @@ export default function App() {
     monthHeader,
   ]);
 
-  const effectiveRowsPerPage = Math.min(
-    rowsPerPage,
-    filteredRows.length || rowsPerPage
-  );
+  const filteredRows = useMemo(() => {
+    let nextRows = [...analyzedRows];
 
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredRows.length / effectiveRowsPerPage)
-  );
+    if (regionFilter !== "all" && regionHeader) {
+      nextRows = nextRows.filter(
+        (row) => String(row[regionHeader] ?? "-") === regionFilter
+      );
+    }
 
+    if (monthFilter !== "all" && monthHeader) {
+      nextRows = nextRows.filter(
+        (row) => normalizeMonth(row[monthHeader]).label === monthFilter
+      );
+    }
+
+    const searchText = tableSearch.trim().toLowerCase();
+    if (searchText) {
+      nextRows = nextRows.filter((row) =>
+        headers.some((header) =>
+          String(row[header] ?? "").toLowerCase().includes(searchText)
+        )
+      );
+    }
+
+    if (sortConfig.key) {
+      nextRows.sort((a, b) => {
+        const aValue = a[sortConfig.key];
+        const bValue = b[sortConfig.key];
+
+        if (typeof aValue === "number" && typeof bValue === "number") {
+          return sortConfig.direction === "asc" ? aValue - bValue : bValue - aValue;
+        }
+
+        const aText = String(aValue ?? "").toLowerCase();
+        const bText = String(bValue ?? "").toLowerCase();
+
+        if (aText < bText) return sortConfig.direction === "asc" ? -1 : 1;
+        if (aText > bText) return sortConfig.direction === "asc" ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return nextRows;
+  }, [
+    analyzedRows,
+    regionFilter,
+    monthFilter,
+    regionHeader,
+    monthHeader,
+    tableSearch,
+    headers,
+    sortConfig,
+  ]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / rowsPerPage));
   const safeCurrentPage = Math.min(currentPage, totalPages);
-  const startIndex = (safeCurrentPage - 1) * effectiveRowsPerPage;
-  const endIndex = startIndex + effectiveRowsPerPage;
-
-  const visibleRows = filteredRows.slice(startIndex, endIndex);
+  const startIndex = (safeCurrentPage - 1) * rowsPerPage;
+  const endIndex = Math.min(startIndex + rowsPerPage, filteredRows.length);
+  const visibleRows = filteredRows.slice(startIndex, startIndex + rowsPerPage);
+  const pageNumbers = getPageNumbers(safeCurrentPage, totalPages);
 
   const maxChartValue = Math.max(
     ...chartData.map((item) => (typeof item.value === "number" ? item.value : 0)),
@@ -377,10 +609,18 @@ export default function App() {
       ? "Region Wise Sales Distribution"
       : "Monthly Sales Trend";
 
+  const tableHeaders = useMemo(() => {
+    if (headers.length) return headers;
+    return ["Column 1"];
+  }, [headers]);
+
   useEffect(() => {
-    if (currentUser) {
+    if (currentUser?.name) {
       setLoggedIn(true);
-      setName(currentUser);
+      setName(currentUser.name);
+    } else {
+      setLoggedIn(false);
+      setName("");
     }
   }, [currentUser]);
 
@@ -389,6 +629,7 @@ export default function App() {
       setAnimateChart(false);
       return;
     }
+
     setAnimateChart(false);
     const timer = setTimeout(() => setAnimateChart(true), 120);
     return () => clearTimeout(timer);
@@ -396,17 +637,39 @@ export default function App() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [tableSearch, activeQuery, rowsPerPage, hasAnalyzed, csvText]);
+  }, [tableSearch, activeQuery, rowsPerPage, hasAnalyzed, csvText, regionFilter, monthFilter, sortConfig]);
+
+  const clearAuthFields = () => {
+    setSignupName("");
+    setEmail("");
+    setPassword("");
+    setConfirmPassword("");
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+  };
 
   const handleSignup = (e) => {
     e.preventDefault();
 
-    const cleanName = name.trim();
+    const cleanName = signupName.trim();
     const cleanEmail = email.trim().toLowerCase();
     const cleanPassword = password.trim();
+    const cleanConfirmPassword = confirmPassword.trim();
 
-    if (!cleanName || !cleanEmail || !cleanPassword) {
+    if (!cleanName || !cleanEmail || !cleanPassword || !cleanConfirmPassword) {
       setAuthMessage("Please fill all fields.");
+      setAuthMessageType("error");
+      return;
+    }
+
+    if (cleanPassword.length < 6) {
+      setAuthMessage("Password must be at least 6 characters.");
+      setAuthMessageType("error");
+      return;
+    }
+
+    if (cleanPassword !== cleanConfirmPassword) {
+      setAuthMessage("Password and confirm password do not match.");
       setAuthMessageType("error");
       return;
     }
@@ -431,9 +694,10 @@ export default function App() {
     setAuthMessage("Account created successfully. Please login.");
     setAuthMessageType("success");
 
-    setName("");
+    setSignupName("");
     setEmail(cleanEmail);
     setPassword("");
+    setConfirmPassword("");
     setIsSignup(false);
   };
 
@@ -459,36 +723,59 @@ export default function App() {
       return;
     }
 
+    const sessionUser = {
+      name: user.name,
+      email: user.email,
+    };
+
     setAuthMessage("");
     setAuthMessageType("");
-
-    setName(user.name || "");
     setLoggedIn(true);
+    setName(user.name);
     setPassword("");
-
-    localStorage.setItem("datavista_current_user", user.name);
-    setCurrentUser(user.name);
+    setConfirmPassword("");
+    setCurrentUser(sessionUser);
+    sessionStorage.setItem("datavista_current_user", JSON.stringify(sessionUser));
   };
 
   const handleLogout = () => {
     setLoggedIn(false);
-    setEmail("");
-    setPassword("");
-    setCurrentUser("");
+    setCurrentUser(null);
+    setName("");
     setAuthMessage("");
     setAuthMessageType("");
-    localStorage.removeItem("datavista_current_user");
+    clearAuthFields();
+    sessionStorage.removeItem("datavista_current_user");
+    resetDashboard();
   };
 
   const handleUpload = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    if (!file.name.toLowerCase().endsWith(".csv")) {
+      setUploadError("Please upload a valid CSV file.");
+      setHasUploaded(false);
+      return;
+    }
+
     const reader = new FileReader();
+
     reader.onload = (e) => {
       const text = String(e.target?.result || "");
       const parsed = parseCSV(text);
 
+      if (parsed.error) {
+        setUploadError(parsed.error);
+        setCsvText("");
+        setFileName("");
+        setHasUploaded(false);
+        setResultText("Upload failed.");
+        setInsightText(parsed.error);
+        return;
+      }
+
+      setUploadError("");
       setCsvText(text);
       setFileName(file.name);
       setHasUploaded(true);
@@ -497,18 +784,22 @@ export default function App() {
       setActiveQuery("");
       setHasAnalyzed(false);
       setLoading(false);
-
       setTableSearch("");
       setRecentQueries([]);
       setRowsPerPage(8);
+      setCustomRowsInput("8");
       setCurrentPage(1);
       setChartType("top");
+      setSortConfig({ key: "", direction: "asc" });
+      setRegionFilter("all");
+      setMonthFilter("all");
 
       setResultText("Dataset uploaded successfully.");
       setInsightText(
         `Dataset ready. ${parsed.rows.length} rows loaded successfully. Enter a query and click Analyze to generate charts and insights.`
       );
     };
+
     reader.readAsText(file);
   };
 
@@ -521,10 +812,16 @@ export default function App() {
       return;
     }
 
+    if (!salesHeader) {
+      setResultText("Sales column not found.");
+      setInsightText("Your CSV must contain a sales column for analysis.");
+      return;
+    }
+
     if (!q) {
       setResultText("Please enter a question.");
       setInsightText(
-        "Try queries like top product, total sales, average, monthly sales, or region wise sales."
+        "Try queries like top product, best product, total sales, average sales, monthly sales, or region wise sales."
       );
       return;
     }
@@ -534,55 +831,87 @@ export default function App() {
     setTimeout(() => {
       let nextChartType = "top";
       let response = "Query analyzed successfully.";
+      let supported = true;
 
-      if (q.includes("top")) {
+      if (q.includes("top") || q.includes("best") || q.includes("highest")) {
         nextChartType = "top";
         response = `Top product is ${topProduct?.[productHeader] || "-"} with sales ${formatNumber(
           topProduct?.[salesHeader] || 0
         )}`;
-      } else if (q.includes("lowest")) {
+      } else if (
+        q.includes("lowest") ||
+        q.includes("minimum") ||
+        q.includes("worst")
+      ) {
         nextChartType = "lowest";
         response = `Lowest product is ${
           lowestProduct?.[productHeader] || "-"
         } with sales ${formatNumber(lowestProduct?.[salesHeader] || 0)}`;
-      } else if (q.includes("average")) {
+      } else if (q.includes("average") || q.includes("mean")) {
         nextChartType = "average";
         response = `Average sales is ${formatNumber(Number(averageSales.toFixed(2)))}`;
-      } else if (q.includes("total")) {
+      } else if (q.includes("total") || q.includes("sum")) {
         nextChartType = "total";
         response = `Total sales is ${formatNumber(totalSales)}`;
       } else if (q.includes("region")) {
+        if (!regionHeader) {
+          supported = false;
+          response = "Region column not found.";
+          setResultText(response);
+          setInsightText("This dataset does not contain a region column.");
+          setLoading(false);
+          return;
+        }
         nextChartType = "region";
         response = "Showing region wise sales distribution.";
-      } else if (q.includes("month")) {
+      } else if (q.includes("month") || q.includes("monthly")) {
+        if (!monthHeader) {
+          supported = false;
+          response = "Month column not found.";
+          setResultText(response);
+          setInsightText("This dataset does not contain a month column.");
+          setLoading(false);
+          return;
+        }
         nextChartType = "month";
         response = "Showing monthly sales trend.";
+      } else {
+        supported = false;
+        setResultText("Unsupported query.");
+        setInsightText(
+          "Try queries like top product, best product, lowest product, average sales, total sales, region wise sales, or monthly sales."
+        );
+        setHasAnalyzed(false);
+        setActiveQuery("");
+        setLoading(false);
+        return;
       }
 
-      const autoInsight = getInsightText({
-        chartType: nextChartType,
-        topProduct,
-        lowestProduct,
-        averageSales,
-        totalSales,
-        regionData,
-        monthData,
-        productHeader,
-        salesHeader,
-      });
+      if (supported) {
+        const autoInsight = buildInsightText({
+          chartType: nextChartType,
+          topProduct,
+          lowestProduct,
+          averageSales,
+          totalSales,
+          regionData,
+          monthData,
+          productHeader,
+          salesHeader,
+        });
 
-      setChartType(nextChartType);
-      setHasAnalyzed(true);
-      setActiveQuery(q);
-      setTableSearch("");
-      setCurrentPage(1);
+        setChartType(nextChartType);
+        setHasAnalyzed(true);
+        setActiveQuery(q);
+        setTableSearch("");
+        setCurrentPage(1);
+        setResultText(response);
+        setInsightText(autoInsight);
+        setRecentQueries((prev) => [q, ...prev.filter((item) => item !== q)].slice(0, 5));
+      }
 
-      setResultText(response);
-      setInsightText(autoInsight);
-
-      setRecentQueries((prev) => [q, ...prev.filter((item) => item !== q)].slice(0, 5));
       setLoading(false);
-    }, 900);
+    }, 700);
   };
 
   const handleQuickQuery = (text) => {
@@ -593,6 +922,7 @@ export default function App() {
     setCsvText("");
     setFileName("");
     setHasUploaded(false);
+    setUploadError("");
 
     setQuery("");
     setActiveQuery("");
@@ -602,17 +932,57 @@ export default function App() {
     setTableSearch("");
     setRecentQueries([]);
     setRowsPerPage(8);
+    setCustomRowsInput("8");
     setCurrentPage(1);
     setChartType("top");
+    setSortConfig({ key: "", direction: "asc" });
+    setRegionFilter("all");
+    setMonthFilter("all");
 
     setResultText("Upload your CSV and ask a question to generate smart insights.");
-    setInsightText("Dashboard loaded successfully. Upload a CSV to unlock live visual analysis.");
+    setInsightText(
+      "Dashboard loaded successfully. Upload a CSV to unlock live visual analysis."
+    );
   };
 
-  const tableHeaders = useMemo(() => {
-    if (headers.length) return headers;
-    return ["Column 1"];
-  }, [headers]);
+  const clearFilters = () => {
+    setTableSearch("");
+    setRegionFilter("all");
+    setMonthFilter("all");
+    setSortConfig({ key: "", direction: "asc" });
+    setCurrentPage(1);
+  };
+
+  const handleSort = (header) => {
+    setSortConfig((prev) => {
+      if (prev.key === header) {
+        return {
+          key: header,
+          direction: prev.direction === "asc" ? "desc" : "asc",
+        };
+      }
+
+      return {
+        key: header,
+        direction: "asc",
+      };
+    });
+  };
+
+  const handleRowsPerPageChange = (value) => {
+    const numeric = Number(value);
+    if (Number.isNaN(numeric) || numeric < 1) return;
+
+    const safeValue = Math.min(Math.max(numeric, 1), 100);
+    setRowsPerPage(safeValue);
+    setCustomRowsInput(String(safeValue));
+    setCurrentPage(1);
+  };
+
+  const filteredCsvContent = useMemo(() => {
+    if (!tableHeaders.length || !filteredRows.length) return "";
+    return toCsvContent(tableHeaders, filteredRows);
+  }, [tableHeaders, filteredRows]);
 
   if (!loggedIn) {
     return (
@@ -636,7 +1006,7 @@ export default function App() {
           }
           .auth-card {
             width: 100%;
-            max-width: 470px;
+            max-width: 490px;
             background: linear-gradient(180deg, rgba(11, 25, 64, 0.96), rgba(8, 20, 53, 0.96));
             border: 1px solid rgba(102, 126, 234, 0.22);
             border-radius: 30px;
@@ -695,6 +1065,9 @@ export default function App() {
             font-weight: 700;
             font-size: 14px;
           }
+          .input-wrap {
+            position: relative;
+          }
           .input {
             width: 100%;
             height: 56px;
@@ -706,10 +1079,24 @@ export default function App() {
             font-size: 15px;
             outline: none;
           }
+          .input.password {
+            padding-right: 70px;
+          }
           .input::placeholder { color: #92a0d3; }
           .input:focus {
             border-color: rgba(129, 140, 248, 0.7);
             box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
+          }
+          .toggle-password {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            border: none;
+            background: transparent;
+            color: #c7d2fe;
+            cursor: pointer;
+            font-weight: 700;
           }
           .auth-btn {
             width: 100%;
@@ -763,37 +1150,72 @@ export default function App() {
               {isSignup && (
                 <div className="form-group">
                   <label className="label">Full Name</label>
-                  <input
-                    className="input"
-                    type="text"
-                    placeholder="Enter your full name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
+                  <div className="input-wrap">
+                    <input
+                      className="input"
+                      type="text"
+                      placeholder="Enter your full name"
+                      value={signupName}
+                      onChange={(e) => setSignupName(e.target.value)}
+                    />
+                  </div>
                 </div>
               )}
 
               <div className="form-group">
                 <label className="label">Email Address</label>
-                <input
-                  className="input"
-                  type="email"
-                  placeholder="Enter your email address"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
+                <div className="input-wrap">
+                  <input
+                    className="input"
+                    type="email"
+                    placeholder="Enter your email address"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
               </div>
 
               <div className="form-group">
                 <label className="label">Password</label>
-                <input
-                  className="input"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
+                <div className="input-wrap">
+                  <input
+                    className="input password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="toggle-password"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                  >
+                    {showPassword ? "Hide" : "Show"}
+                  </button>
+                </div>
               </div>
+
+              {isSignup && (
+                <div className="form-group">
+                  <label className="label">Confirm Password</label>
+                  <div className="input-wrap">
+                    <input
+                      className="input password"
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="Confirm your password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className="toggle-password"
+                      onClick={() => setShowConfirmPassword((prev) => !prev)}
+                    >
+                      {showConfirmPassword ? "Hide" : "Show"}
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <button type="submit" className="auth-btn">
                 {isSignup ? "Create New Account" : "Login"}
@@ -806,9 +1228,9 @@ export default function App() {
                 className="switch-link"
                 onClick={() => {
                   setIsSignup(!isSignup);
-                  setPassword("");
                   setAuthMessage("");
                   setAuthMessageType("");
+                  clearAuthFields();
                 }}
               >
                 {isSignup ? "Login" : "Sign Up"}
@@ -1003,6 +1425,17 @@ export default function App() {
           color: #cbd5e1;
         }
 
+        .upload-error {
+          max-width: 800px;
+          text-align: center;
+          padding: 14px 18px;
+          border-radius: 16px;
+          background: rgba(239, 68, 68, 0.12);
+          border: 1px solid rgba(239, 68, 68, 0.35);
+          color: #fecaca;
+          font-weight: 600;
+        }
+
         .dot {
           width: 8px;
           height: 8px;
@@ -1047,6 +1480,14 @@ export default function App() {
 
         .btn-download {
           background: linear-gradient(135deg, #22c55e, #16a34a);
+        }
+
+        .btn-export {
+          background: linear-gradient(135deg, #06b6d4, #2563eb);
+        }
+
+        .btn-clear {
+          background: linear-gradient(135deg, #475569, #334155);
         }
 
         .file-input {
@@ -1151,7 +1592,7 @@ export default function App() {
           margin-right: auto;
         }
 
-        .query-input, .table-search, .rows-select {
+        .query-input, .table-search, .rows-select, .filter-select, .rows-input {
           width: 100%;
           height: 56px;
           border-radius: 18px;
@@ -1163,8 +1604,17 @@ export default function App() {
           outline: none;
         }
 
-        .query-input::placeholder, .table-search::placeholder {
+        .rows-input {
+          width: 120px;
+        }
+
+        .query-input::placeholder, .table-search::placeholder, .rows-input::placeholder {
           color: #92a0d3;
+        }
+
+        .filter-select option, .rows-select option {
+          background: #0f1b45;
+          color: white;
         }
 
         .analyze-btn {
@@ -1289,7 +1739,7 @@ export default function App() {
 
         .chart-wrap {
           margin-top: 10px;
-          height: 420px;
+          min-height: 320px;
           padding: 16px 18px 10px;
           position: relative;
           overflow: visible;
@@ -1336,7 +1786,7 @@ export default function App() {
         .plot {
           flex: 1;
           position: relative;
-          height: 100%;
+          height: 360px;
           padding: 24px 0 50px;
           border-left: 1px solid rgba(255,255,255,.08);
           border-bottom: 1px solid rgba(255,255,255,.08);
@@ -1379,10 +1829,11 @@ export default function App() {
           font-size: 14px;
           color: #d5daf7;
           text-align: center;
+          word-break: break-word;
         }
 
         .line-chart-box {
-          height: 250px;
+          height: 280px;
           display: flex;
           align-items: flex-end;
           gap: 12px;
@@ -1525,25 +1976,25 @@ export default function App() {
           display: flex;
           gap: 12px;
           flex-wrap: wrap;
-        }
-        
-        .rows-select {
-          width: 120px;
-          background: rgba(255,255,255,.06);
-          color: white;
-          border: 1px solid rgba(145,157,215,.2);
-          border-radius: 18px;
-          padding: 0 16px;
-          height: 56px;
-          outline: none;
-          appearance: none;
-          -webkit-appearance: none;
-          -moz-appearance: none;
+          align-items: center;
         }
 
-        .rows-select option {
-          background: #0f1b45;
-          color: white;
+        .filters-row {
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+          margin-bottom: 18px;
+        }
+
+        .table-summary {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 12px;
+          flex-wrap: wrap;
+          margin-bottom: 14px;
+          color: #cbd5e1;
+          font-size: 15px;
         }
 
         .table-wrap {
@@ -1569,6 +2020,12 @@ export default function App() {
           font-size: 16px;
           font-weight: 800;
           background: rgba(255,255,255,.02);
+          cursor: pointer;
+          user-select: none;
+        }
+
+        th:hover {
+          background: rgba(255,255,255,.05);
         }
 
         td {
@@ -1577,6 +2034,49 @@ export default function App() {
 
         tr:hover td {
           background: rgba(255,255,255,.025);
+        }
+
+        .sort-icon {
+          margin-left: 8px;
+          color: #a5b4fc;
+          font-size: 13px;
+        }
+
+        .pagination {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 12px;
+          margin-top: 18px;
+          flex-wrap: wrap;
+        }
+
+        .page-btn-row {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+          flex-wrap: wrap;
+        }
+
+        .page-number {
+          min-width: 42px;
+          height: 42px;
+          border-radius: 12px;
+          border: 1px solid rgba(255,255,255,.08);
+          background: rgba(255,255,255,.04);
+          color: white;
+          cursor: pointer;
+          font-weight: 700;
+        }
+
+        .page-number.active {
+          background: linear-gradient(135deg, #6d5dfc, #8b5cf6);
+          border-color: transparent;
+        }
+
+        .page-number.dots {
+          cursor: default;
+          opacity: .7;
         }
 
         @keyframes fadeIn {
@@ -1606,6 +2106,7 @@ export default function App() {
           .hero-title h1 { font-size: 34px; }
           .pie-main { width: 180px; height: 180px; }
           .pie-hole { inset: 40px; }
+          .plot { height: 290px; }
         }
 
         @media (max-width: 640px) {
@@ -1615,9 +2116,10 @@ export default function App() {
           .section-title, .ask-title, .table-head h2 { font-size: 24px; }
           .plot { gap: 10px; }
           .bar-group { min-width: 48px; }
-          .chart-wrap { height: 280px; }
           .result-card h3 { font-size: 22px; }
           .result-card p { font-size: 15px; }
+          .table-controls, .filters-row { width: 100%; }
+          .table-search, .filter-select, .rows-select, .rows-input { width: 100%; }
         }
       `}</style>
 
@@ -1630,7 +2132,7 @@ export default function App() {
                 <div className="hero-title">
                   <h1>DataVista AI Dashboard</h1>
                   <p>
-                    Welcome{name ? `, ${name}` : ""}! Upload data, ask questions, and get instant charts, insights, and summaries.
+                    Welcome{name ? `, ${name}` : ""}! Upload data, ask questions, and get instant charts, insights, filters, sorting, and summaries.
                   </p>
                 </div>
               </div>
@@ -1658,13 +2160,15 @@ export default function App() {
                 <ul className="how-list">
                   <li>1. Upload your CSV file</li>
                   <li>2. Enter a natural language query</li>
-                  <li>3. Click Analyze to generate insights</li>
+                  <li>3. Analyze, filter, sort and export results</li>
                 </ul>
               </div>
             </div>
 
             <div className="status-bar">
-              {hasUploaded ? (
+              {uploadError ? (
+                <div className="upload-error">{uploadError}</div>
+              ) : hasUploaded ? (
                 <div className="dataset-pill">
                   <span className="dot"></span>
                   Current dataset: {fileName}
@@ -1685,7 +2189,20 @@ export default function App() {
                   onClick={() => downloadCsv(fileName, csvText)}
                   disabled={!hasUploaded}
                 >
-                  Download CSV
+                  Download Original CSV
+                </button>
+
+                <button
+                  className="btn btn-export"
+                  onClick={() =>
+                    downloadCsv(
+                      fileName ? `filtered_${fileName}` : "filtered_dataset.csv",
+                      filteredCsvContent
+                    )
+                  }
+                  disabled={!hasUploaded || !filteredRows.length}
+                >
+                  Export Filtered CSV
                 </button>
               </div>
             </div>
@@ -1742,8 +2259,8 @@ export default function App() {
                   <h3>Project Strength</h3>
                   <ul>
                     <li>CSV upload and intelligent dashboard flow.</li>
-                    <li>Query-based chart and table updates.</li>
-                    <li>Professional compact dashboard layout.</li>
+                    <li>Query-based chart and table updates with filters and sorting.</li>
+                    <li>Professional compact dashboard layout with export support.</li>
                   </ul>
                 </div>
               </div>
@@ -1773,6 +2290,7 @@ export default function App() {
             <div className="chip-row">
               {[
                 "top product",
+                "best product",
                 "lowest product",
                 "average sales",
                 "total sales",
@@ -1795,7 +2313,7 @@ export default function App() {
             </div>
 
             <div className="info-box">
-              Try: top product, lowest product, average sales, total sales, region wise sales, monthly sales.
+              Try: top product, best product, lowest product, average sales, total sales, region wise sales, monthly sales.
             </div>
 
             {loading && (
@@ -1870,7 +2388,11 @@ export default function App() {
 
                         return (
                           <div className="bar-group" key={`${item.name}-${index}`}>
-                            <div className="bar" style={{ height: barHeight }} />
+                            <div
+                              className="bar"
+                              style={{ height: barHeight }}
+                              title={`${item.name}: ${formatNumber(item.value)}`}
+                            />
                             <div className="bar-label-x">{item.name}</div>
                           </div>
                         );
@@ -1890,6 +2412,7 @@ export default function App() {
                             <div
                               className="line-stick"
                               style={{ height: `${Math.max(rawHeight * 2, 12)}px` }}
+                              title={`${item.name}: ${formatNumber(item.value)}`}
                             />
                           </div>
                           <div className="line-label">{item.name}</div>
@@ -1910,14 +2433,22 @@ export default function App() {
                           "#06b6d4",
                           "#22c55e",
                           "#f59e0b",
+                          "#14b8a6",
+                          "#ef4444",
+                          "#84cc16",
+                          "#f97316",
                         ];
 
                         let start = 0;
                         return (
                           <>
                             {chartData.map((item, index) => {
-                              const percent = totalSales
-                                ? (item.value / totalSales) * 100
+                              const totalRegionSales = regionData.reduce(
+                                (sum, item) => sum + item.value,
+                                0
+                              );
+                              const percent = totalRegionSales
+                                ? (item.value / totalRegionSales) * 100
                                 : 0;
                               const end = start + percent;
                               const segment = (
@@ -1951,9 +2482,19 @@ export default function App() {
                           "#06b6d4",
                           "#22c55e",
                           "#f59e0b",
+                          "#14b8a6",
+                          "#ef4444",
+                          "#84cc16",
+                          "#f97316",
                         ];
-                        const percentage = totalSales
-                          ? ((item.value / totalSales) * 100).toFixed(1)
+
+                        const totalRegionSales = regionData.reduce(
+                          (sum, data) => sum + data.value,
+                          0
+                        );
+
+                        const percentage = totalRegionSales
+                          ? ((item.value / totalRegionSales) * 100).toFixed(1)
                           : 0;
 
                         return (
@@ -1996,17 +2537,71 @@ export default function App() {
 
                   <select
                     className="rows-select"
-                    value={effectiveRowsPerPage}
-                    onChange={(e) => {
-                      setRowsPerPage(Number(e.target.value));
-                      setCurrentPage(1);
-                    }}
+                    value={rowsPerPage}
+                    onChange={(e) => handleRowsPerPageChange(e.target.value)}
                   >
                     <option value={5}>5 rows</option>
                     <option value={8}>8 rows</option>
                     <option value={10}>10 rows</option>
                     <option value={15}>15 rows</option>
+                    <option value={20}>20 rows</option>
                   </select>
+
+                  <input
+                    className="rows-input"
+                    type="number"
+                    min="1"
+                    max="100"
+                    placeholder="Custom rows"
+                    value={customRowsInput}
+                    onChange={(e) => setCustomRowsInput(e.target.value)}
+                    onBlur={() => handleRowsPerPageChange(customRowsInput)}
+                  />
+
+                  <button className="btn btn-clear" onClick={clearFilters}>
+                    Clear Filters
+                  </button>
+                </div>
+              </div>
+
+              <div className="filters-row">
+                {regionHeader && (
+                  <select
+                    className="filter-select"
+                    value={regionFilter}
+                    onChange={(e) => setRegionFilter(e.target.value)}
+                  >
+                    <option value="all">All Regions</option>
+                    {uniqueRegionOptions.map((region) => (
+                      <option key={region} value={region}>
+                        {region}
+                      </option>
+                    ))}
+                  </select>
+                )}
+
+                {monthHeader && (
+                  <select
+                    className="filter-select"
+                    value={monthFilter}
+                    onChange={(e) => setMonthFilter(e.target.value)}
+                  >
+                    <option value="all">All Months</option>
+                    {uniqueMonthOptions.map((month) => (
+                      <option key={month} value={month}>
+                        {month}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              <div className="table-summary">
+                <div>
+                  Showing {filteredRows.length ? startIndex + 1 : 0} to {endIndex} of {filteredRows.length} rows
+                </div>
+                <div>
+                  Current Page: {safeCurrentPage} / {totalPages}
                 </div>
               </div>
 
@@ -2015,7 +2610,16 @@ export default function App() {
                   <thead>
                     <tr>
                       {tableHeaders.map((header) => (
-                        <th key={header}>{header}</th>
+                        <th key={header} onClick={() => handleSort(header)}>
+                          {header}
+                          <span className="sort-icon">
+                            {sortConfig.key === header
+                              ? sortConfig.direction === "asc"
+                                ? "▲"
+                                : "▼"
+                              : "↕"}
+                          </span>
+                        </th>
                       ))}
                     </tr>
                   </thead>
@@ -2041,21 +2645,24 @@ export default function App() {
                 </table>
               </div>
 
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  gap: "12px",
-                  marginTop: "18px",
-                  flexWrap: "wrap",
-                }}
-              >
+              <div className="pagination">
                 <div style={{ color: "#cbd5e1", fontSize: "15px" }}>
                   Page {safeCurrentPage} of {totalPages}
                 </div>
 
-                <div style={{ display: "flex", gap: "10px" }}>
+                <div className="page-btn-row">
+                  <button
+                    className="btn"
+                    onClick={() => setCurrentPage(1)}
+                    disabled={safeCurrentPage === 1}
+                    style={{
+                      background: "linear-gradient(135deg, #334155, #1e293b)",
+                      padding: "12px 18px",
+                    }}
+                  >
+                    First
+                  </button>
+
                   <button
                     className="btn"
                     onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
@@ -2067,6 +2674,22 @@ export default function App() {
                   >
                     Prev
                   </button>
+
+                  {pageNumbers.map((page, index) =>
+                    page === "..." ? (
+                      <button key={`dots-${index}`} className="page-number dots" disabled>
+                        ...
+                      </button>
+                    ) : (
+                      <button
+                        key={page}
+                        className={`page-number ${safeCurrentPage === page ? "active" : ""}`}
+                        onClick={() => setCurrentPage(page)}
+                      >
+                        {page}
+                      </button>
+                    )
+                  )}
 
                   <button
                     className="btn"
@@ -2080,6 +2703,18 @@ export default function App() {
                     }}
                   >
                     Next
+                  </button>
+
+                  <button
+                    className="btn"
+                    onClick={() => setCurrentPage(totalPages)}
+                    disabled={safeCurrentPage === totalPages}
+                    style={{
+                      background: "linear-gradient(135deg, #6d5dfc, #8b5cf6)",
+                      padding: "12px 18px",
+                    }}
+                  >
+                    Last
                   </button>
                 </div>
               </div>
